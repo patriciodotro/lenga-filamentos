@@ -986,18 +986,49 @@ function Calculadora({ filamentos }) {
         {lineas.map((linea,i) => {
           const fil = filamentos.find(f => f.key===linea.key);
           const costoParcial = fil && linea.gramos ? (fil.precioUltimo/fil.pesoUnitario)*Number(linea.gramos) : null;
+          const coloresDisp=[...new Set(disponibles.map(f=>f.color))].sort();
+          const materialesDisp=[...new Set(disponibles.filter(f=>!linea.filtColor||f.color===linea.filtColor).map(f=>f.material))].sort();
+          const marcasDisp=[...new Set(disponibles.filter(f=>(!linea.filtColor||f.color===linea.filtColor)&&(!linea.filtMaterial||f.material===linea.filtMaterial)).map(f=>f.marca))].sort();
+          const filsFiltrados=disponibles.filter(f=>
+            (!linea.filtColor||f.color===linea.filtColor)&&
+            (!linea.filtMaterial||f.material===linea.filtMaterial)&&
+            (!linea.filtMarca||f.marca===linea.filtMarca)
+          );
           return (
             <div key={i} className="imp-row">
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                 <span style={{fontSize:11,color:"#555",fontWeight:700,letterSpacing:".06em"}}>FILAMENTO {i+1}</span>
                 {lineas.length>1 && <button className="btn-sm" onClick={()=>setLineas(ls=>ls.filter((_,idx)=>idx!==i))}>Quitar</button>}
               </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                <div>
+                  <div className="lbl">Color</div>
+                  <select className="inp" value={linea.filtColor||""} onChange={e=>setLinea(i,"filtColor",e.target.value)}>
+                    <option value="">— Todos —</option>
+                    {coloresDisp.map(c=><option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div className="lbl">Material</div>
+                  <select className="inp" value={linea.filtMaterial||""} onChange={e=>setLinea(i,"filtMaterial",e.target.value)}>
+                    <option value="">— Todos —</option>
+                    {materialesDisp.map(m=><option key={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div className="lbl">Marca</div>
+                  <select className="inp" value={linea.filtMarca||""} onChange={e=>setLinea(i,"filtMarca",e.target.value)}>
+                    <option value="">— Todas —</option>
+                    {marcasDisp.map(m=><option key={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                 <div style={{gridColumn:"1/-1"}}>
-                  <div className="lbl">Filamento</div>
+                  <div className="lbl">Filamento{filsFiltrados.length>0?` (${filsFiltrados.length} opciones)`:""}</div>
                   <select className="inp" value={linea.key} onChange={e=>setLinea(i,"key",e.target.value)}>
                     <option value="">— Seleccioná —</option>
-                    {disponibles.map(f=><option key={f.key} value={f.key}>{f.color} · {f.tipo} · {f.material} · {f.marca} ({fmtG(f.stockGramos)}g)</option>)}
+                    {filsFiltrados.map(f=><option key={f.key} value={f.key}>{f.color} · {f.tipo} · {f.material} · {f.marca} ({fmtG(f.stockGramos)}g)</option>)}
                   </select>
                 </div>
                 <div>
