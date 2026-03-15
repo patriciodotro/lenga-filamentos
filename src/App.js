@@ -13,6 +13,13 @@ const MAESTROS_DEFAULT = {
   colores:    ["Amarillo","Ambar","Arrayan","Blanco","Blanco Calido","Bordo","Caliza","Cobre","Dorado","Dulce de Leche","Gris","Marron","Nafta Super","Naranja","Natural","Negro","Piedra","Piel 720","Pino","Tan","Verde","Verde Militar"],
   estantes:   ["Estante Alto", "Estante Medio", "Estante Bajo"],
   posiciones: ["AD 1","AD 2","AD 3","AD 4","AD 5","AD 6","AD 7","AD 8","AD 9","AD 10","AT 1","AT 2","AT 3","AT 4","AT 5","AT 6","AT 7","AT 8","AT 9","AT 10","AT 1 2","AT 2 3","AT 3 4","AT 5 6","AT 6 7","AT 7 8","AT 8 9","AT 7 8 9","AT 2 3 4","AD 1 2 3","AD 6 7"],
+  bobinas:    [
+    { marca:"Grilon3",             pesoBobina:217.5 },
+    { marca:"PrintaLot plastico",  pesoBobina:155   },
+    { marca:"PrintaLot carton",    pesoBobina:200   },
+    { marca:"IIID MAX",            pesoBobina:142.3 },
+    { marca:"Bambu Lab",           pesoBobina:216   },
+  ],
 };
 
 const STOCK_INICIAL = [
@@ -159,7 +166,9 @@ export default function App() {
     const movData = (m||[]).map(x=>({...x,color:fixColor(x.color),marca:x.marca||"Grilon3"}));
     saveLS(DB_KEY, filData); saveLS(MOV_KEY, movData);
     setFilamentos(filData); setMovs(movData);
-    setMaestros(ma || MAESTROS_DEFAULT);
+    const maData = ma || MAESTROS_DEFAULT;
+    if (!maData.bobinas) maData.bobinas = MAESTROS_DEFAULT.bobinas;
+    setMaestros(maData);
     setLoaded(true);
   }, []);
 
@@ -175,6 +184,14 @@ export default function App() {
     saveMov(movimientos.map(m => { const mf=field==="tipo"?"tipo_fil":field; return m[mf]===oldVal?{...m,[mf]:newVal}:m; }));
     saveMaes({...maestros,[lista]:maestros[lista].map(x=>x===oldVal?newVal:x)});
     toast_(`✓ "${oldVal}" → "${newVal}" actualizado en todos los registros`);
+  };
+
+  const handleAjuste = (key, nuevoStockNeto) => {
+    const newFils = filamentos.map(f => f.key === key ? {...f, stockGramos: nuevoStockNeto} : f);
+    saveFil(newFils);
+    const fil = filamentos.find(f => f.key === key);
+    saveMov([...movimientos, {id:Date.now(), tipo:"ajuste", fecha:new Date().toISOString(), key, material:fil.material, tipo_fil:fil.tipo, marca:fil.marca, color:fil.color, gramos:nuevoStockNeto}]);
+    toast_(`✓ Stock de ${fil.color} ${fil.material} actualizado a ${fmtG(nuevoStockNeto)}g`);
   };
 
   const handleCompra = c => {
@@ -209,7 +226,7 @@ export default function App() {
           <div className="header-inner" style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,paddingBottom:0}}>
             <img src={LOGO_SRC} alt="Lenga" style={{height:44,objectFit:"contain",marginBottom:4,background:"#0d0d0d",padding:"2px 6px",borderRadius:6}}/>
             <div className="tabs-row" style={{display:"flex"}}>
-              {[["dashboard","Dashboard"],["compra","Compra"],["impresion","Impresión"],["historial","Historial"],["maestros","Maestros"]].map(([id,label])=>(
+              {[["dashboard","Dashboard"],["compra","Compra"],["impresion","Impresión"],["ajuste","Ajuste stock"],["historial","Historial"],["maestros","Maestros"]].map(([id,label])=>(
                 <button key={id} className={`tab${tab===id?" on":""}`} onClick={()=>setTab(id)}>{label}</button>
               ))}
             </div>
@@ -220,8 +237,9 @@ export default function App() {
           {tab==="compra"     && <FormCompra maestros={maestros} onSubmit={handleCompra}/>}
           {tab==="impresion"  && <FormImpresion filamentos={filamentos} onSubmit={handleImpresion}/>}
           {tab==="historial"  && <Historial movimientos={movimientos}/>}
+          {tab==="ajuste"    && <AjusteStock filamentos={filamentos} maestros={maestros} onAjuste={handleAjuste}/>}
           {tab==="maestros"   && <Maestros maestros={maestros}
-            onAdd={(l,v)=>saveMaes({...maestros,[l]:[...maestros[l],v]})}
+            onAdd={(l,v)=>{ if(l==="bobinas_update"){saveMaes({...maestros,bobinas:v});}else{saveMaes({...maestros,[l]:[...maestros[l],v]});}}}
             onDelete={(l,v)=>saveMaes({...maestros,[l]:maestros[l].filter(x=>x!==v)})}
             onRename={handleRename}/>}
         </div>
@@ -601,6 +619,7 @@ function Historial({ movimientos }) {
   const sorted=[...movimientos].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
   const rows=[]; const seen=new Set();
   sorted.forEach(m=>{
+    if(m.tipo==="ajuste"){rows.push({type:"ajuste",data:m});return;}
     if(m.tipo==="compra"){rows.push({type:"compra",data:m});return;}
     if(m.grupoId){ if(seen.has(m.grupoId))return; seen.add(m.grupoId); const grupo=sorted.filter(x=>x.grupoId===m.grupoId); rows.push({type:"impresion_grupo",data:grupo,fecha:m.fecha,id:m.grupoId}); }
     else { rows.push({type:"impresion",data:m}); }
@@ -612,7 +631,19 @@ function Historial({ movimientos }) {
         {rows.length===0
           ?<div style={{color:"#333",fontSize:13,textAlign:"center",padding:"20px 0"}}>Sin movimientos registrados.</div>
           :rows.map((row,ri)=>{
-            if(row.type==="compra"){const m=row.data;return(
+            if(row.type==="ajuste"){const m=row.data;return(
+              <div key={m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderBottom:"1px solid #1a1a1a"}}>
+                <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                  <span style={{fontSize:9,padding:"3px 8px",borderRadius:4,letterSpacing:".06em",fontWeight:700,background:"#1a1a3a",color:"#6688cc",border:"1px solid #2a2a5a"}}>AJUSTE</span>
+                  <div><span style={{fontSize:13,color:"#ccc",fontWeight:500}}>{m.color} {m.material}</span><span style={{fontSize:11,color:"#444",marginLeft:8}}>{m.marca}</span></div>
+                </div>
+                <div style={{textAlign:"right",flexShrink:0,marginLeft:12}}>
+                  <div style={{fontSize:13,fontWeight:700,color:"#6688cc"}}>{fmtG(m.gramos)}g</div>
+                  <div style={{fontSize:10,color:"#333",marginTop:2}}>{new Date(m.fecha).toLocaleDateString("es-AR",{day:"2-digit",month:"short",year:"numeric"})}</div>
+                </div>
+              </div>
+            );}
+    if(row.type==="compra"){const m=row.data;return(
               <div key={m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderBottom:"1px solid #1a1a1a"}}>
                 <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
                   <span style={{fontSize:9,padding:"3px 8px",borderRadius:4,letterSpacing:".06em",fontWeight:700,background:"#4b7d0b18",color:"#4b7d0b",border:"1px solid #4b7d0b33"}}>COMPRA</span>
@@ -651,6 +682,116 @@ function Historial({ movimientos }) {
   );
 }
 
+// ── AJUSTE STOCK ──────────────────────────────────────────────────────────────
+function AjusteStock({ filamentos, maestros, onAjuste }) {
+  const [selectedKey, setSelectedKey] = useState("");
+  const [pesoBrutoCargado, setPesoBrutoCargado] = useState("");
+  const [marcaBobina, setMarcaBobina] = useState("");
+  const [confirmado, setConfirmado] = useState(false);
+
+  const bobinas = maestros.bobinas || [];
+  const fil = filamentos.find(f => f.key === selectedKey);
+  const pesoBobin = bobinas.find(b => b.marca === marcaBobina)?.pesoBobina || 0;
+  const stockNeto = pesoBrutoCargado && pesoBobin ? Math.max(0, Number(pesoBrutoCargado) - pesoBobin) : null;
+  const diferencia = fil && stockNeto !== null ? stockNeto - fil.stockGramos : null;
+
+  const reset = () => { setSelectedKey(""); setPesoBrutoCargado(""); setMarcaBobina(""); setConfirmado(false); };
+
+  const submit = () => {
+    if (!selectedKey || stockNeto === null) return alert("Completá todos los campos.");
+    if (stockNeto < 0) return alert("El peso neto no puede ser negativo.");
+    onAjuste(selectedKey, stockNeto);
+    reset();
+  };
+
+  // Group filamentos for display
+  const sorted = [...filamentos].sort((a,b)=>a.color.localeCompare(b.color));
+
+  return (
+    <div style={{maxWidth:560}}>
+      <div className="section-title">Ajuste de stock</div>
+      <div style={{fontSize:12,color:"#555",marginBottom:20,lineHeight:1.6}}>
+        Usá esta sección para corregir el stock de una bobina pesándola en ese momento. Ingresá el peso bruto (bobina + filamento) y el sistema descuenta el peso de la bobina vacía automáticamente.
+      </div>
+      <div className="card" style={{display:"flex",flexDirection:"column",gap:16}}>
+        <div>
+          <div className="lbl">Filamento a ajustar</div>
+          <select className="inp" value={selectedKey} onChange={e=>{setSelectedKey(e.target.value);setConfirmado(false);}}>
+            <option value="">— Seleccioná un filamento —</option>
+            {sorted.map(f=>(
+              <option key={f.key} value={f.key}>
+                {f.color} · {f.tipo} · {f.material} · {f.marca} — Stock actual: {fmtG(f.stockGramos)}g{f.posicion?` (${f.posicion})`:""}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {fil && (
+          <div style={{background:"#0d0d0d",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#555",border:"1px solid #1e1e1e",display:"flex",gap:16,flexWrap:"wrap"}}>
+            <span>Stock actual: <span style={{color:"#4b7d0b",fontWeight:700}}>{fmtG(fil.stockGramos)}g</span></span>
+            {fil.posicion && <span>Ubicación: <span style={{color:"#888"}}>{fil.estante} — {fil.posicion}</span></span>}
+          </div>
+        )}
+
+        <div>
+          <div className="lbl">Marca de la bobina vacía</div>
+          <select className="inp" value={marcaBobina} onChange={e=>setMarcaBobina(e.target.value)}>
+            <option value="">— Seleccioná marca de bobina —</option>
+            {bobinas.map(b=>(
+              <option key={b.marca} value={b.marca}>{b.marca} — bobina vacía: {fmtG(b.pesoBobina)}g</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <div className="lbl">Peso bruto total (bobina + filamento, en gramos)</div>
+          <input className="inp" type="number" min={0} placeholder="Ej: 450" value={pesoBrutoCargado} onChange={e=>{setPesoBrutoCargado(e.target.value);setConfirmado(false);}}/>
+        </div>
+
+        {stockNeto !== null && marcaBobina && (
+          <div style={{background:"#0d0d0d",borderRadius:10,padding:"14px 16px",border:"1px solid #252525"}}>
+            <div style={{fontSize:11,color:"#555",marginBottom:8,fontWeight:600,letterSpacing:".06em",textTransform:"uppercase"}}>Resumen del ajuste</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+              <div>
+                <div style={{fontSize:10,color:"#444",marginBottom:3}}>Peso bruto</div>
+                <div style={{fontSize:15,color:"#aaa",fontWeight:700}}>{fmtG(Number(pesoBrutoCargado))}g</div>
+              </div>
+              <div>
+                <div style={{fontSize:10,color:"#444",marginBottom:3}}>Bobina vacía</div>
+                <div style={{fontSize:15,color:"#cc5555",fontWeight:700}}>−{fmtG(pesoBobin)}g</div>
+              </div>
+              <div>
+                <div style={{fontSize:10,color:"#444",marginBottom:3}}>Stock neto</div>
+                <div style={{fontSize:15,color:"#4b7d0b",fontWeight:700}}>{fmtG(stockNeto)}g</div>
+              </div>
+            </div>
+            {fil && diferencia !== null && (
+              <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid #1a1a1a",fontSize:12,color:"#555"}}>
+                Cambio respecto al stock actual:
+                <span style={{marginLeft:8,fontWeight:700,color:diferencia>=0?"#4b7d0b":"#cc5555"}}>
+                  {diferencia>=0?"+":""}{fmtG(diferencia)}g
+                </span>
+                {diferencia<0&&<span style={{marginLeft:8,fontSize:10,color:"#cc5555"}}>({fmtG(Math.abs(diferencia))}g de consumo no registrado)</span>}
+              </div>
+            )}
+            <div style={{marginTop:14}}>
+              <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:12,color:"#666"}}>
+                <input type="checkbox" checked={confirmado} onChange={e=>setConfirmado(e.target.checked)} style={{width:14,height:14,accentColor:"#4b7d0b"}}/>
+                Confirmo que el nuevo stock es <strong style={{color:"#e0e0e0",marginLeft:4}}>{fmtG(stockNeto)}g</strong>
+              </label>
+            </div>
+          </div>
+        )}
+
+        <button className="btn" onClick={submit} style={{opacity:(!confirmado||!selectedKey||stockNeto===null)?0.4:1,cursor:(!confirmado||!selectedKey||stockNeto===null)?"not-allowed":"pointer"}}>
+          Aplicar ajuste de stock
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
 // ── EDIT MODAL ────────────────────────────────────────────────────────────────
 function EditModal({ value, onSave, onClose }) {
   const [val,setVal]=useState(value);
@@ -675,6 +816,9 @@ function Maestros({ maestros, onAdd, onDelete, onRename }) {
   const add=lista=>{const val=newVals[lista].trim();if(!val)return;if(maestros[lista].includes(val))return alert("Ya existe.");onAdd(lista,val);setNewVals(v=>({...v,[lista]:""}));};
   const saveEdit=nv=>{const t=nv.trim();if(!t)return;if(t===editing.value){setEditing(null);return;}if(maestros[editing.lista].includes(t)){alert("Ya existe.");return;}onRename(editing.lista,editing.value,t);setEditing(null);};
   const LISTAS=[{key:"materiales",label:"Materiales"},{key:"tipos",label:"Tipos de filamento"},{key:"marcas",label:"Marcas"},{key:"colores",label:"Colores"},{key:"estantes",label:"Estantes"},{key:"posiciones",label:"Posiciones"}];
+  // Bobinas state
+  const [newBobina,setNewBobina] = useState({marca:"",pesoBobina:""});
+  const [editingBobina,setEditingBobina] = useState(null); // index
   return (
     <div>
       {editing&&<EditModal value={editing.value} onSave={saveEdit} onClose={()=>setEditing(null)}/>}
@@ -699,6 +843,51 @@ function Maestros({ maestros, onAdd, onDelete, onRename }) {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Pesos de bobinas */}
+      <div style={{marginTop:14}} className="card">
+        <div style={{fontSize:12,color:"#aaa",fontWeight:700,marginBottom:14,letterSpacing:".04em",textTransform:"uppercase"}}>Pesos de bobinas vacías</div>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+          <thead>
+            <tr style={{borderBottom:"1px solid #252525"}}>
+              {["Marca bobina","Peso (g)",""].map(h=>(
+                <th key={h} style={{textAlign:"left",padding:"6px 8px",fontSize:10,color:"#444",letterSpacing:".08em",textTransform:"uppercase",fontWeight:600}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {(maestros.bobinas||[]).map((b,i)=>(
+              <tr key={i} style={{borderBottom:"1px solid #1a1a1a"}}>
+                {editingBobina===i ? (
+                  <>
+                    <td style={{padding:"6px 4px"}}><input className="inp" style={{padding:"6px 10px",fontSize:12}} value={b.marca} onChange={e=>{const nb=[...maestros.bobinas];nb[i]={...nb[i],marca:e.target.value};onAdd("bobinas_update",nb);}}/></td>
+                    <td style={{padding:"6px 4px"}}><input className="inp" style={{padding:"6px 10px",fontSize:12,width:100}} type="number" value={b.pesoBobina} onChange={e=>{const nb=[...maestros.bobinas];nb[i]={...nb[i],pesoBobina:Number(e.target.value)};onAdd("bobinas_update",nb);}}/></td>
+                    <td style={{padding:"6px 4px"}}><button className="btn-add" onClick={()=>setEditingBobina(null)}>✓ Listo</button></td>
+                  </>
+                ) : (
+                  <>
+                    <td style={{padding:"8px",color:"#ccc",fontWeight:500}}>{b.marca}</td>
+                    <td style={{padding:"8px",color:"#4b7d0b",fontWeight:700}}>{fmtG(b.pesoBobina)}g</td>
+                    <td style={{padding:"8px",display:"flex",gap:6}}>
+                      <button className="btn-icon" style={{color:"#4b7d0b"}} onClick={()=>setEditingBobina(i)}>✎</button>
+                      <button className="btn-icon" style={{color:"#555"}} onClick={()=>{if(window.confirm(`¿Eliminás "${b.marca}"?`)){const nb=maestros.bobinas.filter((_,j)=>j!==i);onAdd("bobinas_update",nb);}}}>×</button>
+                    </td>
+                  </>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div style={{display:"flex",gap:8,marginTop:14}}>
+          <input className="inp" style={{flex:2,padding:"8px 12px",fontSize:12}} placeholder="Marca de bobina..." value={newBobina.marca} onChange={e=>setNewBobina(v=>({...v,marca:e.target.value}))}/>
+          <input className="inp" style={{width:110,padding:"8px 12px",fontSize:12}} type="number" placeholder="Peso (g)" value={newBobina.pesoBobina} onChange={e=>setNewBobina(v=>({...v,pesoBobina:e.target.value}))}/>
+          <button className="btn-add" onClick={()=>{
+            if(!newBobina.marca||!newBobina.pesoBobina) return;
+            onAdd("bobinas_update",[...(maestros.bobinas||[]),{marca:newBobina.marca,pesoBobina:Number(newBobina.pesoBobina)}]);
+            setNewBobina({marca:"",pesoBobina:""});
+          }}>+ Agregar</button>
+        </div>
       </div>
     </div>
   );
