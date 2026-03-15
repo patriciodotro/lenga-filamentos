@@ -186,6 +186,17 @@ export default function App() {
     toast_(`✓ "${oldVal}" → "${newVal}" actualizado en todos los registros`);
   };
 
+  const handlePrecioUpdate = (marca, material, tipo, nuevoPrecio) => {
+    const newFils = filamentos.map(f =>
+      f.marca===marca && f.material===material && f.tipo===tipo
+        ? {...f, precioUltimo: nuevoPrecio}
+        : f
+    );
+    saveFil(newFils);
+    const count = newFils.filter(f=>f.marca===marca&&f.material===material&&f.tipo===tipo).length;
+    toast_(`✓ Precio de ${material} ${tipo} ${marca} actualizado a ${fmtARS(nuevoPrecio)} en ${count} filamento${count!==1?"s":""}`);
+  };
+
   const handleAjuste = (key, nuevoStockNeto) => {
     const newFils = filamentos.map(f => f.key === key ? {...f, stockGramos: nuevoStockNeto} : f);
     saveFil(newFils);
@@ -238,10 +249,11 @@ export default function App() {
           {tab==="impresion"  && <FormImpresion filamentos={filamentos} onSubmit={handleImpresion}/>}
           {tab==="historial"  && <Historial movimientos={movimientos}/>}
           {tab==="ajuste"    && <AjusteStock filamentos={filamentos} maestros={maestros} onAjuste={handleAjuste}/>}
-          {tab==="maestros"   && <Maestros maestros={maestros}
+          {tab==="maestros"   && <Maestros maestros={maestros} filamentos={filamentos}
             onAdd={(l,v)=>{ if(l==="bobinas_update"){saveMaes({...maestros,bobinas:v});}else{saveMaes({...maestros,[l]:[...maestros[l],v]});}}}
             onDelete={(l,v)=>saveMaes({...maestros,[l]:maestros[l].filter(x=>x!==v)})}
-            onRename={handleRename}/>}
+            onRename={handleRename}
+            onPrecioUpdate={handlePrecioUpdate}/>}
         </div>
       </div>
     </div>
@@ -847,7 +859,7 @@ function EditModal({ value, onSave, onClose }) {
 }
 
 // ── MAESTROS ──────────────────────────────────────────────────────────────────
-function Maestros({ maestros, onAdd, onDelete, onRename }) {
+function Maestros({ maestros, filamentos, onAdd, onDelete, onRename, onPrecioUpdate }) {
   const [newVals,setNewVals]=useState({materiales:"",tipos:"",marcas:"",colores:"",estantes:"",posiciones:""});
   const [editing,setEditing]=useState(null);
   const add=lista=>{const val=newVals[lista].trim();if(!val)return;if(maestros[lista].includes(val))return alert("Ya existe.");onAdd(lista,val);setNewVals(v=>({...v,[lista]:""}));};
@@ -855,7 +867,10 @@ function Maestros({ maestros, onAdd, onDelete, onRename }) {
   const LISTAS=[{key:"materiales",label:"Materiales"},{key:"tipos",label:"Tipos de filamento"},{key:"marcas",label:"Marcas"},{key:"colores",label:"Colores"},{key:"estantes",label:"Estantes"},{key:"posiciones",label:"Posiciones"}];
   // Bobinas state
   const [newBobina,setNewBobina] = useState({marca:"",pesoBobina:""});
-  const [editingBobina,setEditingBobina] = useState(null); // index
+  const [editingBobina,setEditingBobina] = useState(null);
+  // Precios state
+  const [editingPrecio,setEditingPrecio] = useState(null); // {marca,material,tipo}
+  const [precioEdit,setPrecioEdit] = useState("");
   return (
     <div>
       {editing&&<EditModal value={editing.value} onSave={saveEdit} onClose={()=>setEditing(null)}/>}
@@ -880,6 +895,65 @@ function Maestros({ maestros, onAdd, onDelete, onRename }) {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Precios por marca/material/tipo */}
+      <div style={{marginTop:14}} className="card">
+        <div style={{fontSize:12,color:"#aaa",fontWeight:700,marginBottom:14,letterSpacing:".04em",textTransform:"uppercase"}}>Precios de filamentos</div>
+        <div style={{fontSize:11,color:"#555",marginBottom:14}}>Editá el precio de una bobina de 1kg. El cambio se aplica a todos los filamentos de esa combinación.</div>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+          <thead>
+            <tr style={{borderBottom:"1px solid #252525"}}>
+              {["Marca","Material","Tipo","Precio / kg","Cantidad",""].map((h,i)=>(
+                <th key={i} style={{textAlign:"left",padding:"6px 8px",fontSize:10,color:"#444",letterSpacing:".08em",textTransform:"uppercase",fontWeight:600}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {Object.values(
+              (filamentos||[]).reduce((acc,f)=>{
+                const k=`${f.marca}||${f.material}||${f.tipo}`;
+                if(!acc[k]) acc[k]={marca:f.marca,material:f.material,tipo:f.tipo,precio:f.precioUltimo,count:0};
+                acc[k].count++;
+                return acc;
+              },{})
+            ).sort((a,b)=>a.marca.localeCompare(b.marca)||a.material.localeCompare(b.material)).map((row,i)=>{
+              const isEditing = editingPrecio && editingPrecio.marca===row.marca && editingPrecio.material===row.material && editingPrecio.tipo===row.tipo;
+              return (
+                <tr key={i} style={{borderBottom:"1px solid #1a1a1a"}}>
+                  <td style={{padding:"8px",color:"#ccc",fontWeight:500}}>{row.marca}</td>
+                  <td style={{padding:"8px",color:"#888"}}>{row.material}</td>
+                  <td style={{padding:"8px",color:"#666"}}>{row.tipo}</td>
+                  <td style={{padding:"8px 4px"}}>
+                    {isEditing ? (
+                      <input className="inp" type="number" style={{padding:"5px 10px",fontSize:12,width:120}}
+                        value={precioEdit} onChange={e=>setPrecioEdit(e.target.value)}
+                        onKeyDown={e=>{
+                          if(e.key==="Enter"&&precioEdit){onPrecioUpdate(row.marca,row.material,row.tipo,Number(precioEdit));setEditingPrecio(null);}
+                          if(e.key==="Escape") setEditingPrecio(null);
+                        }}
+                        autoFocus
+                      />
+                    ) : (
+                      <span style={{color:"#4b7d0b",fontWeight:700}}>{fmtARS(row.precio)}</span>
+                    )}
+                  </td>
+                  <td style={{padding:"8px",color:"#444",fontSize:11}}>{row.count} rollo{row.count!==1?"s":""}</td>
+                  <td style={{padding:"8px 4px"}}>
+                    {isEditing ? (
+                      <div style={{display:"flex",gap:6}}>
+                        <button className="btn-add" onClick={()=>{if(precioEdit){onPrecioUpdate(row.marca,row.material,row.tipo,Number(precioEdit));setEditingPrecio(null);}}} style={{borderColor:"#4b7d0b",color:"#4b7d0b"}}>✓ Guardar</button>
+                        <button className="btn-icon" style={{color:"#555"}} onClick={()=>setEditingPrecio(null)}>✕</button>
+                      </div>
+                    ) : (
+                      <button className="btn-icon" style={{color:"#4b7d0b"}} onClick={()=>{setEditingPrecio({marca:row.marca,material:row.material,tipo:row.tipo});setPrecioEdit(String(row.precio));}}>✎</button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       {/* Pesos de bobinas */}
