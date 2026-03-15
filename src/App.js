@@ -942,7 +942,7 @@ function Calculadora({ filamentos }) {
     const margenErrorARS_recalc = margenBase * (gastos.margenError / 100);
     const subtotal = costoMaterial + costoLuz + costoMaquina + margenErrorARS_recalc + costoInsumos;
     const totalVenta = subtotal * multiplicador;
-    const totalML = totalVenta * 1.18; // MercadoLibre ~18%
+    const totalML = totalVenta / (1 - 0.3434); // MercadoLibre ~34,3% comisión efectiva
 
     setResultado({ costoMaterial, costoLuz, costoMaquina, margenErrorARS:margenErrorARS_recalc, costoInsumos, subtotal, totalVenta, totalML, totalGramos, tiempoH });
   };
@@ -1102,7 +1102,7 @@ function Calculadora({ filamentos }) {
             <span style={{color:"#4b7d0b",fontWeight:800,fontSize:16}}>{fmtARS(resultado.totalVenta)}</span>
           </div>
           <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",fontSize:12}}>
-            <span style={{color:"#555"}}>Precio MercadoLibre (+18%)</span>
+            <span style={{color:"#555"}}>Precio MercadoLibre (+34,3% comisión)</span>
             <span style={{color:"#888",fontWeight:600}}>{fmtARS(resultado.totalML)}</span>
           </div>
           {resultado.tiempoH > 0 && (
