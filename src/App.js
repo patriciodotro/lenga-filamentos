@@ -933,16 +933,18 @@ function Calculadora({ filamentos }) {
       ? (gastos.precioRepuestos / gastos.hsMaquina) * tiempoH : 0;
 
     // Margen de error sobre material
-    const margenErrorARS = costoMaterial * (gastos.margenError / 100);
+    // margenErrorARS calculated below after costoMaquina
 
     // Insumos extra
     const costoInsumos = Number(insumos) || 0;
 
-    const subtotal = costoMaterial + costoLuz + costoMaquina + margenErrorARS + costoInsumos;
+    const margenBase = costoMaterial + costoLuz + costoMaquina;
+    const margenErrorARS_recalc = margenBase * (gastos.margenError / 100);
+    const subtotal = costoMaterial + costoLuz + costoMaquina + margenErrorARS_recalc + costoInsumos;
     const totalVenta = subtotal * multiplicador;
     const totalML = totalVenta * 1.18; // MercadoLibre ~18%
 
-    setResultado({ costoMaterial, costoLuz, costoMaquina, margenErrorARS, costoInsumos, subtotal, totalVenta, totalML, totalGramos, tiempoH });
+    setResultado({ costoMaterial, costoLuz, costoMaquina, margenErrorARS:margenErrorARS_recalc, costoInsumos, subtotal, totalVenta, totalML, totalGramos, tiempoH });
   };
 
   const InputNum = ({label, val, onChange, placeholder, suffix}) => (
