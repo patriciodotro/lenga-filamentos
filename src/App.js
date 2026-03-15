@@ -91,7 +91,7 @@ function PosicionBadge({ posicion, estante }) {
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0d0d0d; font-family: 'Montserrat', sans-serif; }
+  html { zoom: 1.25; } body { background: #0d0d0d; font-family: 'Montserrat', sans-serif; }
   input, select, textarea { outline: none; -webkit-appearance: none; appearance: none; font-family: 'Montserrat', sans-serif; }
   input:focus, select:focus { border-color: #4b7d0b !important; box-shadow: 0 0 0 3px #4b7d0b22 !important; }
   .tab { background: none; border: none; cursor: pointer; font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 600; padding: 14px 16px; color: #444; transition: all .2s; letter-spacing: .06em; border-bottom: 2px solid transparent; white-space: nowrap; text-transform: uppercase; }
@@ -197,13 +197,13 @@ export default function App() {
   if (!loaded) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#0d0d0d",color:"#4b7d0b",fontFamily:"Montserrat,sans-serif",fontSize:13,letterSpacing:"0.1em",fontWeight:600}}>CARGANDO...</div>;
 
   return (
-    <div style={{minHeight:"100vh",background:"#0d0d0d",color:"#e0e0e0",fontFamily:"'Montserrat',sans-serif"}}>
+    <div style={{minHeight:"100vh",background:"#0d0d0d",color:"#ffffff",fontFamily:"'Montserrat',sans-serif"}}>
       <style>{CSS}</style>
       {toast && <div style={{position:"fixed",top:16,right:16,background:"#0d1a00",border:"1px solid #4b7d0b55",borderRadius:10,padding:"12px 18px",fontSize:12,color:"#6fb010",zIndex:9999,boxShadow:"0 8px 32px #00000077",maxWidth:340,fontWeight:600}}>{toast}</div>}
       <div style={{maxWidth:1060,margin:"0 auto",padding:"0 20px"}}>
         <div style={{borderBottom:"1px solid #1a1a1a",paddingTop:20}}>
           <div className="header-inner" style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,paddingBottom:0}}>
-            <img src={LOGO_SRC} alt="Lenga" style={{height:44,objectFit:"contain",marginBottom:4}}/>
+            <img src={LOGO_SRC} alt="Lenga" style={{height:44,objectFit:"contain",marginBottom:4,background:"#0d0d0d",padding:"2px 6px",borderRadius:6}}/>
             <div className="tabs-row" style={{display:"flex"}}>
               {[["dashboard","Dashboard"],["compra","Compra"],["impresion","Impresión"],["historial","Historial"],["maestros","Maestros"]].map(([id,label])=>(
                 <button key={id} className={`tab${tab===id?" on":""}`} onClick={()=>setTab(id)}>{label}</button>
@@ -248,7 +248,7 @@ function Dashboard({ filamentos, movimientos }) {
   const [sortDir,setSortDir] = useState("asc");
   const [searchColor,setSearchColor] = useState("");
   const [searchMarca,setSearchMarca] = useState("");
-  const [searchTipo,setSearchTipo]   = useState("");
+  const [searchMaterial,setSearchMaterial] = useState("");
   const [showSug,setShowSug]         = useState(false);
 
   const allColors = [...new Set(filamentos.map(f=>f.color))].sort();
@@ -258,12 +258,12 @@ function Dashboard({ filamentos, movimientos }) {
 
   const filtered = useMemo(()=>{
     return filamentos.filter(f=>{
-      const mc = !searchColor || f.color.toLowerCase().includes(searchColor.toLowerCase());
-      const mm = !searchMarca || f.marca.toLowerCase().includes(searchMarca.toLowerCase());
-      const mt = !searchTipo  || f.tipo.toLowerCase().includes(searchTipo.toLowerCase());
+      const mc = !searchColor || (f.color||"").toLowerCase().includes(searchColor.toLowerCase());
+      const mm = !searchMarca || (f.marca||"").toLowerCase().includes(searchMarca.toLowerCase());
+      const mt = !searchMaterial || (f.material||"").toLowerCase().includes(searchMaterial.toLowerCase());
       return mc && mm && mt;
     });
-  },[filamentos,searchColor,searchMarca,searchTipo]);
+  },[filamentos,searchColor,searchMarca,searchMaterial]);
 
   const sorted = useMemo(()=>{
     const arr=[...filtered];
@@ -289,7 +289,7 @@ function Dashboard({ filamentos, movimientos }) {
   };
 
   const TH = ({col,label,style={}}) => (
-    <div className="sort-th" style={{fontSize:9,color:"#444",letterSpacing:".08em",textTransform:"uppercase",fontWeight:600,cursor:"pointer",...style}} onClick={()=>toggleSort(col)}>
+    <div className="sort-th" style={{fontSize:9,color:"#bbb",letterSpacing:".08em",textTransform:"uppercase",fontWeight:600,cursor:"pointer",...style}} onClick={()=>toggleSort(col)}>
       {label}<SortArrow col={col}/>
     </div>
   );
@@ -308,8 +308,8 @@ function Dashboard({ filamentos, movimientos }) {
         ].map((s,i)=>(
           <div key={i} className="card" style={{padding:18}}>
             <div style={{fontSize:26,fontWeight:800,color:s.color,letterSpacing:"-0.02em",lineHeight:1}}>{s.val}</div>
-            <div style={{fontSize:10,color:"#555",letterSpacing:".08em",textTransform:"uppercase",marginTop:8,fontWeight:600}}>{s.label}</div>
-            <div style={{fontSize:10,color:"#333",marginTop:2}}>{s.sub}</div>
+            <div style={{fontSize:10,color:"#bbb",letterSpacing:".08em",textTransform:"uppercase",marginTop:8,fontWeight:600}}>{s.label}</div>
+            <div style={{fontSize:10,color:"#888",marginTop:2}}>{s.sub}</div>
           </div>
         ))}
       </div>
@@ -320,9 +320,9 @@ function Dashboard({ filamentos, movimientos }) {
           <div style={{display:"flex",gap:6,alignItems:"flex-end",height:80}}>
             {meses.map((m,i)=>(
               <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:5}}>
-                {m.gramos>0&&<div style={{fontSize:9,color:"#666",fontWeight:600}}>{fmtG(m.gramos)}</div>}
+                {m.gramos>0&&<div style={{fontSize:9,color:"#bbb",fontWeight:600}}>{fmtG(m.gramos)}</div>}
                 <div style={{width:"100%",borderRadius:3,background:m.gramos>0?"#4b7d0b":"#1a1a1a",height:`${Math.max(m.gramos>0?8:3,(m.gramos/maxG)*60)}px`,transition:"height .6s"}}/>
-                <div style={{fontSize:9,color:"#444",fontWeight:600}}>{m.label}</div>
+                <div style={{fontSize:9,color:"#999",fontWeight:600}}>{m.label}</div>
               </div>
             ))}
           </div>
@@ -332,7 +332,7 @@ function Dashboard({ filamentos, movimientos }) {
           {Object.entries(porMat).map(([mat,g])=>(
             <div key={mat} style={{marginBottom:12}}>
               <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:5}}>
-                <span style={{color:"#aaa",fontWeight:500}}>{mat}</span>
+                <span style={{color:"#ddd",fontWeight:500}}>{mat}</span>
                 <span style={{color:"#4b7d0b",fontWeight:600}}>{fmtG(g)}g</span>
               </div>
               <div className="bar"><div className="bar-fill" style={{width:`${Math.min(100,(g/totalStock)*100)||0}%`,background:"#4b7d0b"}}/></div>
@@ -365,14 +365,14 @@ function Dashboard({ filamentos, movimientos }) {
             <input className="inp" style={{padding:"8px 12px",fontSize:12}} placeholder="Ej: Grilon3..." value={searchMarca} onChange={e=>setSearchMarca(e.target.value)}/>
           </div>
           <div>
-            <div className="lbl">Filtrar por tipo</div>
-            <input className="inp" style={{padding:"8px 12px",fontSize:12}} placeholder="Ej: Wood..." value={searchTipo} onChange={e=>setSearchTipo(e.target.value)}/>
+            <div className="lbl">Filtrar por material</div>
+            <input className="inp" style={{padding:"8px 12px",fontSize:12}} placeholder="Ej: PLA..." value={searchMaterial} onChange={e=>setSearchTipo(e.target.value)}/>
           </div>
         </div>
-        {(searchColor||searchMarca||searchTipo)&&(
+        {(searchColor||searchMarca||searchMaterial)&&(
           <div style={{marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
             <span style={{fontSize:11,color:"#555"}}>{sorted.length} resultado{sorted.length!==1?"s":""}</span>
-            <button onClick={()=>{setSearchColor("");setSearchMarca("");setSearchTipo("");}} style={{fontSize:10,background:"none",border:"1px solid #333",borderRadius:4,padding:"2px 8px",color:"#666",cursor:"pointer",fontFamily:"Montserrat,sans-serif"}}>Limpiar filtros</button>
+            <button onClick={()=>{setSearchColor("");setSearchMarca("");setSearchMaterial("");}} style={{fontSize:10,background:"none",border:"1px solid #333",borderRadius:4,padding:"2px 8px",color:"#666",cursor:"pointer",fontFamily:"Montserrat,sans-serif"}}>Limpiar filtros</button>
           </div>
         )}
 
@@ -382,7 +382,7 @@ function Dashboard({ filamentos, movimientos }) {
           <TH col="tipo"         label="Tipo"/>
           <TH col="marca"        label="Marca"/>
           <TH col="stockGramos"  label="Stock"/>
-          <div style={{fontSize:9,color:"#333",letterSpacing:".08em",textTransform:"uppercase",fontWeight:600}}>Ubicación</div>
+          <div style={{fontSize:9,color:"#bbb",letterSpacing:".08em",textTransform:"uppercase",fontWeight:600}}>Ubicación</div>
           <TH col="precioUltimo" label="Valor" style={{textAlign:"right"}}/>
         </div>
 
@@ -393,10 +393,10 @@ function Dashboard({ filamentos, movimientos }) {
             const bajo=f.stockGramos>0&&f.stockGramos<STOCK_MINIMO;
             return (
               <div key={f.key} style={{display:"grid",gridTemplateColumns:cols,gap:10,alignItems:"center",borderBottom:"1px solid #1a1a1a",padding:"12px 0"}}>
-                <div style={{fontSize:13,color:"#e0e0e0",fontWeight:600}}>{f.color}</div>
-                <div style={{fontSize:11,color:"#666",fontWeight:500}}>{f.material}</div>
-                <div style={{fontSize:10,color:"#444",fontWeight:500}}>{f.tipo}</div>
-                <div style={{fontSize:11,color:"#666",fontWeight:500}}>{f.marca}</div>
+                <div style={{fontSize:13,color:"#ffffff",fontWeight:600}}>{f.color}</div>
+                <div style={{fontSize:11,color:"#ccc",fontWeight:500}}>{f.material}</div>
+                <div style={{fontSize:10,color:"#bbb",fontWeight:500}}>{f.tipo}</div>
+                <div style={{fontSize:11,color:"#bbb",fontWeight:500}}>{f.marca}</div>
                 <div>
                   <div style={{fontSize:13,color:bajo?"#cc4444":f.stockGramos===0?"#aa2222":"#4b7d0b",fontWeight:700}}>
                     {fmtG(f.stockGramos)}g
@@ -553,7 +553,7 @@ function Historial({ movimientos }) {
               <div key={m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderBottom:"1px solid #1a1a1a"}}>
                 <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
                   <span style={{fontSize:9,padding:"3px 8px",borderRadius:4,letterSpacing:".06em",fontWeight:700,background:"#4b7d0b18",color:"#4b7d0b",border:"1px solid #4b7d0b33"}}>COMPRA</span>
-                  <div><span style={{fontSize:13,color:"#ccc",fontWeight:500}}>{m.color} {m.material}</span><span style={{fontSize:11,color:"#444",marginLeft:8}}>{m.tipo_fil}</span><span style={{fontSize:11,color:"#333",marginLeft:8}}>{m.marca}</span><span style={{fontSize:10,color:"#444",marginLeft:8}}>{m.cantidad} bobina{m.cantidad>1?"s":""}</span></div>
+                  <div><span style={{fontSize:13,color:"#ffffff",fontWeight:500}}>{m.color} {m.material}</span><span style={{fontSize:11,color:"#444",marginLeft:8}}>{m.tipo_fil}</span><span style={{fontSize:11,color:"#333",marginLeft:8}}>{m.marca}</span><span style={{fontSize:10,color:"#444",marginLeft:8}}>{m.cantidad} bobina{m.cantidad>1?"s":""}</span></div>
                 </div>
                 <div style={{textAlign:"right",flexShrink:0,marginLeft:12}}>
                   <div style={{fontSize:13,fontWeight:700,color:"#4b7d0b"}}>+{fmtG(m.gramos)}g</div>
@@ -577,7 +577,7 @@ function Historial({ movimientos }) {
             );}
             const m=row.data;return(
               <div key={m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 0",borderBottom:"1px solid #1a1a1a"}}>
-                <div style={{display:"flex",alignItems:"center",gap:12}}><span style={{fontSize:9,padding:"3px 8px",borderRadius:4,letterSpacing:".06em",fontWeight:700,background:"#ffffff08",color:"#777",border:"1px solid #252525"}}>IMPRESIÓN</span><div><span style={{fontSize:13,color:"#ccc",fontWeight:500}}>{m.color} {m.material}</span></div></div>
+                <div style={{display:"flex",alignItems:"center",gap:12}}><span style={{fontSize:9,padding:"3px 8px",borderRadius:4,letterSpacing:".06em",fontWeight:700,background:"#ffffff08",color:"#777",border:"1px solid #252525"}}>IMPRESIÓN</span><div><span style={{fontSize:13,color:"#ffffff",fontWeight:500}}>{m.color} {m.material}</span></div></div>
                 <div style={{textAlign:"right",flexShrink:0,marginLeft:12}}><div style={{fontSize:13,fontWeight:700,color:"#cc5555"}}>-{fmtG(m.gramos)}g</div><div style={{fontSize:10,color:"#333",marginTop:2}}>{new Date(m.fecha).toLocaleDateString("es-AR",{day:"2-digit",month:"short",year:"numeric"})}</div></div>
               </div>
             );
