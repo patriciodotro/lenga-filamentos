@@ -122,14 +122,17 @@ const CSS = `
   .imp-row { background: #0d0d0d; border: 1px solid #222; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
   .search-suggestion { padding: 8px 14px; cursor: pointer; font-size: 13px; color: #aaa; transition: background .15s; }
   .search-suggestion:hover { background: #1a1a1a; color: #e0e0e0; }
+  .desktop-row { display: grid !important; } .mobile-card { display: none !important; }
   ::-webkit-scrollbar { width: 3px; } ::-webkit-scrollbar-track { background: #0d0d0d; } ::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
-  @media (max-width: 640px) {
+  @media (max-width: 700px) {
     .stats-grid { grid-template-columns: 1fr 1fr !important; }
     .charts-grid { grid-template-columns: 1fr !important; }
     .form-grid { grid-template-columns: 1fr !important; }
     .maest-grid { grid-template-columns: 1fr !important; }
     .header-inner { flex-direction: column; align-items: flex-start !important; }
     .tabs-row { overflow-x: auto; width: 100%; }
+    .desktop-row { display: none !important; }
+    .mobile-card { display: block !important; }
   }
 `;
 
@@ -391,22 +394,42 @@ function Dashboard({ filamentos, movimientos }) {
           :sorted.map(f=>{
             const pct=Math.min(100,(f.stockGramos/f.pesoUnitario)*100);
             const bajo=f.stockGramos>0&&f.stockGramos<STOCK_MINIMO;
+            const sc=bajo?"#cc4444":f.stockGramos===0?"#aa2222":"#4b7d0b";
             return (
-              <div key={f.key} style={{display:"grid",gridTemplateColumns:cols,gap:10,alignItems:"center",borderBottom:"1px solid #1a1a1a",padding:"12px 0"}}>
-                <div style={{fontSize:13,color:"#ffffff",fontWeight:600}}>{f.color}</div>
-                <div style={{fontSize:11,color:"#ccc",fontWeight:500}}>{f.material}</div>
-                <div style={{fontSize:10,color:"#bbb",fontWeight:500}}>{f.tipo}</div>
-                <div style={{fontSize:11,color:"#bbb",fontWeight:500}}>{f.marca}</div>
-                <div>
-                  <div style={{fontSize:13,color:bajo?"#cc4444":f.stockGramos===0?"#aa2222":"#4b7d0b",fontWeight:700}}>
-                    {fmtG(f.stockGramos)}g
-                    {bajo&&<span style={{fontSize:9,marginLeft:4,color:"#cc4444"}}>⚠</span>}
-                    {f.stockGramos===0&&<span style={{fontSize:9,marginLeft:4}}>AGOTADO</span>}
+              <div key={f.key}>
+                <div className="desktop-row" style={{display:"grid",gridTemplateColumns:cols,gap:10,alignItems:"center",borderBottom:"1px solid #1a1a1a",padding:"12px 0"}}>
+                  <div style={{fontSize:13,color:"#e0e0e0",fontWeight:600}}>{f.color}</div>
+                  <div style={{fontSize:11,color:"#666",fontWeight:500}}>{f.material}</div>
+                  <div style={{fontSize:10,color:"#444",fontWeight:500}}>{f.tipo}</div>
+                  <div style={{fontSize:11,color:"#666",fontWeight:500}}>{f.marca}</div>
+                  <div>
+                    <div style={{fontSize:13,color:sc,fontWeight:700}}>{fmtG(f.stockGramos)}g{bajo&&<span style={{fontSize:9,marginLeft:4,color:"#cc4444"}}>⚠</span>}{f.stockGramos===0&&<span style={{fontSize:9,marginLeft:4}}>AGOTADO</span>}</div>
+                    <div className="bar"><div className="bar-fill" style={{width:`${pct}%`,background:sc}}/></div>
                   </div>
-                  <div className="bar"><div className="bar-fill" style={{width:`${pct}%`,background:bajo?"#cc4444":"#4b7d0b"}}/></div>
+                  <PosicionBadge posicion={f.posicion} estante={f.estante}/>
+                  <div style={{fontSize:11,color:"#444",textAlign:"right",fontWeight:500}}>{fmtARS(f.precioUltimo/f.pesoUnitario*f.stockGramos)}</div>
                 </div>
-                <PosicionBadge posicion={f.posicion} estante={f.estante}/>
-                <div style={{fontSize:11,color:"#444",textAlign:"right",fontWeight:500}}>{fmtARS(f.precioUltimo/f.pesoUnitario*f.stockGramos)}</div>
+                <div className="mobile-card" style={{borderBottom:"1px solid #1a1a1a",padding:"14px 0"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:16,color:"#e0e0e0",fontWeight:700,marginBottom:6}}>{f.color}</div>
+                      <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                        <span style={{fontSize:10,color:"#888",background:"#1a1a1a",border:"1px solid #252525",borderRadius:4,padding:"2px 8px",fontWeight:600}}>{f.material}</span>
+                        <span style={{fontSize:10,color:"#666",background:"#1a1a1a",border:"1px solid #252525",borderRadius:4,padding:"2px 8px"}}>{f.tipo}</span>
+                        <span style={{fontSize:10,color:"#555",background:"#1a1a1a",border:"1px solid #252525",borderRadius:4,padding:"2px 8px"}}>{f.marca}</span>
+                      </div>
+                    </div>
+                    <div style={{textAlign:"right",flexShrink:0,marginLeft:16}}>
+                      <div style={{fontSize:18,color:sc,fontWeight:800,lineHeight:1}}>{fmtG(f.stockGramos)}g{bajo&&<span style={{fontSize:11,marginLeft:4}}>⚠</span>}</div>
+                      {f.stockGramos===0&&<div style={{fontSize:10,color:"#aa2222",marginTop:2,fontWeight:700}}>AGOTADO</div>}
+                      <div className="bar" style={{width:72,marginTop:6,marginLeft:"auto"}}><div className="bar-fill" style={{width:`${pct}%`,background:sc}}/></div>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:4}}>
+                    <PosicionBadge posicion={f.posicion} estante={f.estante}/>
+                    <div style={{fontSize:12,color:"#555",fontWeight:500}}>{fmtARS(f.precioUltimo/f.pesoUnitario*f.stockGramos)}</div>
+                  </div>
+                </div>
               </div>
             );
           })
