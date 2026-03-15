@@ -9,7 +9,7 @@ const LOGO_SRC  = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAj8AAADmCAYAAAA
 const MAESTROS_DEFAULT = {
   materiales: ["PLA", "PETG", "ABS", "TPU", "ASA", "Support", "Resina"],
   tipos:      ["Normal", "Traslucido", "Wood", "Metal", "ART", "Fluo", "Flex", "Boutique"],
-  marcas:     ["Grilon3", "PrintaLot", "Bamboo", "Elegoo", "Polymaker", "eSUN"],
+  marcas:     ["Grilon3", "Printalot", "Bambu Lab", "IIID MAX", "Ender", "Elegoo", "Polymaker", "eSUN"],
   colores:    ["Amarillo","Ambar","Arrayan","Blanco","Blanco Calido","Bordo","Caliza","Cobre","Dorado","Dulce de Leche","Gris","Marron","Nafta Super","Naranja","Natural","Negro","Piedra","Piel 720","Pino","Tan","Verde","Verde Militar"],
   estantes:   ["Estante Alto", "Estante Medio", "Estante Bajo"],
   posiciones: ["AD 1","AD 2","AD 3","AD 4","AD 5","AD 6","AD 7","AD 8","AD 9","AD 10","AT 1","AT 2","AT 3","AT 4","AT 5","AT 6","AT 7","AT 8","AT 9","AT 10","AT 1 2","AT 2 3","AT 3 4","AT 5 6","AT 6 7","AT 7 8","AT 8 9","AT 7 8 9","AT 2 3 4","AD 1 2 3","AD 6 7"],
@@ -23,35 +23,35 @@ const MAESTROS_DEFAULT = {
 };
 
 const STOCK_INICIAL = [
-  { material:"PLA",     tipo:"Normal",     marca:"Grilon3", color:"Amarillo",        stockGramos:561.5,  precioUltimo:15000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AD 5" },
-  { material:"PLA",     tipo:"Traslucido", marca:"Grilon3", color:"Ambar",           stockGramos:1673,   precioUltimo:15000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AT 5 6" },
-  { material:"PLA",     tipo:"Wood",       marca:"Grilon3", color:"Arrayan",         stockGramos:882,    precioUltimo:18000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 5" },
-  { material:"PLA",     tipo:"Normal",     marca:"Grilon3", color:"Blanco",          stockGramos:29.7,   precioUltimo:15000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AT 7" },
-  { material:"PLA",     tipo:"Normal",     marca:"Grilon3", color:"Blanco Calido",   stockGramos:2140,   precioUltimo:15000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AD 1 2 3" },
-  { material:"PLA",     tipo:"Normal",     marca:"Grilon3", color:"Bordo",           stockGramos:363.9,  precioUltimo:15000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AD 6" },
-  { material:"PLA",     tipo:"ART",        marca:"Grilon3", color:"Caliza",          stockGramos:515,    precioUltimo:18000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AT 10" },
-  { material:"PLA",     tipo:"Metal",      marca:"Grilon3", color:"Cobre",           stockGramos:230,    precioUltimo:18000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 8" },
-  { material:"PLA",     tipo:"Metal",      marca:"Grilon3", color:"Dorado",          stockGramos:188,    precioUltimo:18000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 3" },
-  { material:"PLA",     tipo:"Boutique",   marca:"Grilon3", color:"Dulce de Leche",  stockGramos:77.5,   precioUltimo:20000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AD 7" },
-  { material:"PLA",     tipo:"Normal",     marca:"Grilon3", color:"Gris",            stockGramos:1000,   precioUltimo:15000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 1" },
-  { material:"PETG",    tipo:"Normal",     marca:"Grilon3", color:"Gris",            stockGramos:66,     precioUltimo:18000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AT 3" },
-  { material:"PLA",     tipo:"Normal",     marca:"Grilon3", color:"Marron",          stockGramos:532.7,  precioUltimo:15000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AD 8" },
-  { material:"PLA",     tipo:"Normal",     marca:"Grilon3", color:"Nafta Super",     stockGramos:511,    precioUltimo:15000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 4" },
-  { material:"PLA",     tipo:"Fluo",       marca:"Grilon3", color:"Naranja",         stockGramos:65,     precioUltimo:16000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AD 4" },
-  { material:"PLA",     tipo:"Traslucido", marca:"Grilon3", color:"Natural",         stockGramos:2683,   precioUltimo:15000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AT 2 3 4" },
-  { material:"PLA",     tipo:"Traslucido", marca:"Grilon3", color:"Natural",         stockGramos:303.5,  precioUltimo:15000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AT 1" },
-  { material:"Support", tipo:"Traslucido", marca:"Grilon3", color:"Natural",         stockGramos:257,    precioUltimo:20000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AT 2" },
-  { material:"PLA",     tipo:"Normal",     marca:"Grilon3", color:"Negro",           stockGramos:222,    precioUltimo:15000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AT 8" },
-  { material:"ABS",     tipo:"Normal",     marca:"Grilon3", color:"Negro",           stockGramos:238.5,  precioUltimo:16000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AT 4" },
-  { material:"PLA",     tipo:"Flex",       marca:"Grilon3", color:"Negro",           stockGramos:922,    precioUltimo:20000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AT 1" },
-  { material:"PETG",    tipo:"Normal",     marca:"Grilon3", color:"Negro",           stockGramos:67,     precioUltimo:18000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AT 5" },
-  { material:"PETG",    tipo:"Normal",     marca:"Grilon3", color:"Negro",           stockGramos:78.5,   precioUltimo:18000, pesoUnitario:1000, estante:"Estante Medio", posicion:"AT 2 3" },
-  { material:"PLA",     tipo:"ART",        marca:"Grilon3", color:"Piedra",          stockGramos:1582.5, precioUltimo:18000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AT 7 8 9" },
-  { material:"PLA",     tipo:"Normal",     marca:"Grilon3", color:"Piel 720",        stockGramos:828.5,  precioUltimo:15000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 9" },
-  { material:"PLA",     tipo:"Wood",       marca:"Grilon3", color:"Pino",            stockGramos:440.5,  precioUltimo:18000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 6 7" },
-  { material:"PLA",     tipo:"Normal",     marca:"Grilon3", color:"Tan",             stockGramos:686,    precioUltimo:15000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 10" },
-  { material:"PLA",     tipo:"Normal",     marca:"Grilon3", color:"Verde",           stockGramos:72,     precioUltimo:15000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AT 6" },
-  { material:"PLA",     tipo:"Metal",      marca:"Grilon3", color:"Verde Militar",   stockGramos:956,    precioUltimo:18000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 2" },
+  { material:"PLA",     tipo:"Normal",     marca:"Grilon3",   color:"Amarillo",       stockGramos:561.5,  precioUltimo:15000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AD 5" },
+  { material:"PLA",     tipo:"Traslucido", marca:"Printalot", color:"Ambar",          stockGramos:1673,   precioUltimo:15000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AT 5 6" },
+  { material:"PLA",     tipo:"Wood",       marca:"Printalot", color:"Arrayan",        stockGramos:882,    precioUltimo:18000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 5" },
+  { material:"PLA",     tipo:"Normal",     marca:"IIID MAX",  color:"Blanco",         stockGramos:29.7,   precioUltimo:15000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AT 7" },
+  { material:"PLA",     tipo:"Normal",     marca:"Printalot", color:"Blanco Calido",  stockGramos:2140,   precioUltimo:15000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AD 1 2 3" },
+  { material:"PLA",     tipo:"Normal",     marca:"Grilon3",   color:"Bordo",          stockGramos:363.9,  precioUltimo:15000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AD 6" },
+  { material:"PLA",     tipo:"ART",        marca:"Printalot", color:"Caliza",         stockGramos:515,    precioUltimo:18000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AT 10" },
+  { material:"PLA",     tipo:"Metal",      marca:"Printalot", color:"Cobre",          stockGramos:230,    precioUltimo:18000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 8" },
+  { material:"PLA",     tipo:"Metal",      marca:"Printalot", color:"Dorado",         stockGramos:188,    precioUltimo:18000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 3" },
+  { material:"PLA",     tipo:"Boutique",   marca:"Grilon3",   color:"Dulce de Leche", stockGramos:77.5,   precioUltimo:20000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AD 7" },
+  { material:"PLA",     tipo:"Normal",     marca:"Ender",     color:"Gris",           stockGramos:1000,   precioUltimo:15000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 1" },
+  { material:"PETG",    tipo:"Normal",     marca:"Printalot", color:"Gris",           stockGramos:66,     precioUltimo:18000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AT 3" },
+  { material:"PLA",     tipo:"Normal",     marca:"IIID MAX",  color:"Marron",         stockGramos:532.7,  precioUltimo:15000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AD 8" },
+  { material:"PLA",     tipo:"Normal",     marca:"Printalot", color:"Nafta Super",    stockGramos:511,    precioUltimo:15000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 4" },
+  { material:"PLA",     tipo:"Fluo",       marca:"Printalot", color:"Naranja",        stockGramos:65,     precioUltimo:16000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AD 4" },
+  { material:"PLA",     tipo:"Traslucido", marca:"Printalot", color:"Natural",        stockGramos:2683,   precioUltimo:15000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AT 2 3 4" },
+  { material:"PLA",     tipo:"Traslucido", marca:"Grilon3",   color:"Natural",        stockGramos:303.5,  precioUltimo:15000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AT 1" },
+  { material:"Support", tipo:"Traslucido", marca:"Bambu Lab", color:"Natural",        stockGramos:257,    precioUltimo:20000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AT 2" },
+  { material:"PLA",     tipo:"Normal",     marca:"Printalot", color:"Negro",          stockGramos:222,    precioUltimo:15000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AT 8" },
+  { material:"ABS",     tipo:"Normal",     marca:"Grilon3",   color:"Negro",          stockGramos:238.5,  precioUltimo:16000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AT 4" },
+  { material:"PLA",     tipo:"Flex",       marca:"Printalot", color:"Negro",          stockGramos:922,    precioUltimo:20000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AT 1" },
+  { material:"PETG",    tipo:"Normal",     marca:"Printalot", color:"Negro",          stockGramos:67,     precioUltimo:18000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AT 5" },
+  { material:"PETG",    tipo:"Normal",     marca:"Grilon3",   color:"Negro",          stockGramos:78.5,   precioUltimo:18000, pesoUnitario:1000, estante:"Estante Medio", posicion:"AT 2 3" },
+  { material:"PLA",     tipo:"ART",        marca:"Printalot", color:"Piedra",         stockGramos:1582.5, precioUltimo:18000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AT 7 8 9" },
+  { material:"PLA",     tipo:"Normal",     marca:"Grilon3",   color:"Piel 720",       stockGramos:828.5,  precioUltimo:15000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 9" },
+  { material:"PLA",     tipo:"Wood",       marca:"Grilon3",   color:"Pino",           stockGramos:440.5,  precioUltimo:18000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 6 7" },
+  { material:"PLA",     tipo:"Normal",     marca:"Printalot", color:"Tan",            stockGramos:686,    precioUltimo:15000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 10" },
+  { material:"PLA",     tipo:"Normal",     marca:"Bambu Lab", color:"Verde",          stockGramos:72,     precioUltimo:15000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AT 6" },
+  { material:"PLA",     tipo:"Metal",      marca:"Printalot", color:"Verde Militar",  stockGramos:956,    precioUltimo:18000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 2" },
 ].map((f,i) => ({ ...f, key: `fil_${i}_${f.material}_${f.color}`.toLowerCase().replace(/\s/g,"_") }));
 
 function fmtG(n) { return String(parseFloat(n.toFixed(1))).replace(".",","); }
@@ -153,19 +153,12 @@ export default function App() {
   const [toast, setToast]           = useState(null);
 
   useEffect(() => {
-    const f  = loadLS(DB_KEY, null);
     const m  = loadLS(MOV_KEY, []);
     const ma = loadLS(MAEST_KEY, null);
-    // Migration: fix color names that had position appended in old versions
-    const COLOR_FIX = {
-      "Natural AT1":"Natural","Natural AT2-3-4":"Natural","Natural (Alto)":"Natural","Natural (Bajo)":"Natural",
-      "Negro AT5":"Negro","Negro AT2-3":"Negro","Negro (Bajo)":"Negro","Negro (Medio)":"Negro",
-    };
-    const fixColor = c => COLOR_FIX[c] || c;
-    const filData = f && f.length > 0 ? f.map(x=>({...x,color:fixColor(x.color),marca:x.marca||"Grilon3"})) : STOCK_INICIAL;
-    const movData = (m||[]).map(x=>({...x,color:fixColor(x.color),marca:x.marca||"Grilon3"}));
-    saveLS(DB_KEY, filData); saveLS(MOV_KEY, movData);
-    setFilamentos(filData); setMovs(movData);
+    // Reset stock to correct data with proper brands
+    saveLS(DB_KEY, STOCK_INICIAL);
+    setFilamentos(STOCK_INICIAL);
+    setMovs(m||[]);
     const maData = ma || MAESTROS_DEFAULT;
     if (!maData.bobinas) maData.bobinas = MAESTROS_DEFAULT.bobinas;
     setMaestros(maData);
