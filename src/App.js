@@ -151,6 +151,7 @@ export default function App() {
   const [maestros, setMaestros]     = useState(MAESTROS_DEFAULT);
   const [loaded, setLoaded]         = useState(false);
   const [toast, setToast]           = useState(null);
+  const [showStockMenu, setShowStockMenu] = useState(false);
 
   useEffect(() => {
     const f  = loadLS(DB_KEY, null);
@@ -230,10 +231,31 @@ export default function App() {
         <div style={{borderBottom:"1px solid #1a1a1a",paddingTop:20}}>
           <div className="header-inner" style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8,paddingBottom:0}}>
             <img src={LOGO_SRC} alt="Lenga" style={{height:44,objectFit:"contain",marginBottom:4,background:"#0d0d0d",padding:"2px 6px",borderRadius:6}}/>
-            <div className="tabs-row" style={{display:"flex"}}>
-              {[["dashboard","Dashboard"],["compra","Compra"],["impresion","Impresión"],["ajuste","Ajuste stock"],["historial","Historial"],["maestros","Maestros"]].map(([id,label])=>(
-                <button key={id} className={`tab${tab===id?" on":""}`} onClick={()=>setTab(id)}>{label}</button>
-              ))}
+            <div className="tabs-row" style={{display:"flex",alignItems:"flex-end"}}>
+              {/* Stock de filamento dropdown */}
+              <div style={{position:"relative"}}>
+                <button
+                  className={`tab${["dashboard","compra","impresion","ajuste","historial","maestros"].includes(tab)?" on":""}`}
+                  onClick={()=>setShowStockMenu(v=>!v)}
+                  style={{display:"flex",alignItems:"center",gap:5}}
+                >
+                  Stock de filamento
+                  <span style={{fontSize:9,opacity:0.6}}>{showStockMenu?"▲":"▼"}</span>
+                </button>
+                {showStockMenu && (
+                  <div style={{position:"absolute",top:"100%",left:0,background:"#141414",border:"1px solid #252525",borderRadius:10,zIndex:200,minWidth:180,padding:"6px 0",boxShadow:"0 8px 32px #00000088"}}>
+                    {[["dashboard","Dashboard"],["compra","Compra"],["impresion","Impresión"],["ajuste","Ajuste stock"],["historial","Historial"],["maestros","Maestros"]].map(([id,label])=>(
+                      <button key={id}
+                        onClick={()=>{setTab(id);setShowStockMenu(false);}}
+                        style={{display:"block",width:"100%",textAlign:"left",background:tab===id?"#4b7d0b18":"none",border:"none",padding:"9px 18px",fontSize:12,fontWeight:600,color:tab===id?"#4b7d0b":"#666",cursor:"pointer",fontFamily:"Montserrat,sans-serif",letterSpacing:".06em",transition:"background .15s"}}
+                        onMouseEnter={e=>e.target.style.background=tab===id?"#4b7d0b22":"#1a1a1a"}
+                        onMouseLeave={e=>e.target.style.background=tab===id?"#4b7d0b18":"none"}
+                      >{label}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button className={`tab${tab==="calculadora"?" on":""}`} onClick={()=>{setTab("calculadora");setShowStockMenu(false);}}>Costo de impresión</button>
             </div>
           </div>
         </div>
@@ -243,6 +265,7 @@ export default function App() {
           {tab==="impresion"  && <FormImpresion filamentos={filamentos} onSubmit={handleImpresion}/>}
           {tab==="historial"  && <Historial movimientos={movimientos}/>}
           {tab==="ajuste"    && <AjusteStock filamentos={filamentos} maestros={maestros} onAjuste={handleAjuste}/>}
+          {tab==="calculadora" && <Calculadora filamentos={filamentos}/>}
           {tab==="maestros"   && <Maestros maestros={maestros} filamentos={filamentos}
             onAdd={(l,v)=>{ if(l==="bobinas_update"){saveMaes({...maestros,bobinas:v});}else{saveMaes({...maestros,[l]:[...maestros[l],v]});}}}
             onDelete={(l,v)=>saveMaes({...maestros,[l]:maestros[l].filter(x=>x!==v)})}
@@ -340,6 +363,34 @@ function Dashboard({ filamentos, movimientos }) {
             <div style={{fontSize:10,color:"#888",marginTop:2}}>{s.sub}</div>
           </div>
         ))}
+      </div>
+
+      {/* Extra indicators */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
+        {(()=>{
+          const impresiones = movimientos.filter(m=>m.tipo==="impresion");
+          const thisMonth = new Date().toISOString().slice(0,7);
+          const consumoMes = impresiones.filter(m=>m.fecha.startsWith(thisMonth)).reduce((a,m)=>a+m.gramos,0);
+          const valorConsumido = impresiones.filter(m=>m.fecha.startsWith(thisMonth)).reduce((a,m)=>{
+            const fil = filamentos.find(f=>f.key===m.key);
+            return a + (fil ? (fil.precioUltimo/fil.pesoUnitario)*m.gramos : 0);
+          },0);
+          const masUsado = Object.entries(impresiones.reduce((acc,m)=>{acc[m.color]=(acc[m.color]||0)+m.gramos;return acc;},{})).sort((a,b)=>b[1]-a[1])[0];
+          const costoPorGramo = filamentos.length>0
+            ? filamentos.reduce((a,f)=>a+(f.precioUltimo/f.pesoUnitario),0)/filamentos.length
+            : 0;
+          return [
+            {label:"Consumo este mes",    val:consumoMes>0?`${fmtG(consumoMes)}g`:"—",    sub:"gramos impresos",         color:"#4b7d0b"},
+            {label:"Costo consumido mes", val:consumoMes>0?fmtARS(valorConsumido):"—",     sub:"en filamento",            color:"#4b7d0b"},
+            {label:"Costo/g promedio",    val:`${fmtARS(costoPorGramo)}/g`,                sub:"sobre todo el inventario",color:"#4b7d0b"},
+          ].map((s,i)=>(
+            <div key={i} className="card" style={{padding:18}}>
+              <div style={{fontSize:22,fontWeight:800,color:s.color,letterSpacing:"-0.02em",lineHeight:1}}>{s.val}</div>
+              <div style={{fontSize:10,color:"#555",letterSpacing:".08em",textTransform:"uppercase",marginTop:8,fontWeight:600}}>{s.label}</div>
+              <div style={{fontSize:10,color:"#333",marginTop:2}}>{s.sub}</div>
+            </div>
+          ));
+        })()}
       </div>
 
       <div className="charts-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
@@ -830,6 +881,206 @@ function AjusteStock({ filamentos, maestros, onAjuste }) {
           Aplicar ajuste de stock
         </button>
       </div>
+    </div>
+  );
+}
+
+
+// ── CALCULADORA DE COSTO ──────────────────────────────────────────────────────
+function Calculadora({ filamentos }) {
+  // Gastos fijos de la máquina (persistidos)
+  const [cfg, setCfg] = useState(() => {
+    try { const v = localStorage.getItem("lenga_calc_cfg"); return v ? JSON.parse(v) : null; } catch { return null; }
+  });
+  const defaultCfg = { precioKwh:140, consumoW:120, hsMaquina:4320, precioRepuestos:150000, margenError:10 };
+  const [gastos, setGastos] = useState(cfg || defaultCfg);
+  const [showGastos, setShowGastos] = useState(false);
+
+  // Lineas de filamento
+  const emptyLinea = { key:"", gramos:"" };
+  const [lineas, setLineas] = useState([{...emptyLinea}]);
+  const setLinea = (i,k,v) => setLineas(ls => ls.map((l,idx) => idx===i ? {...l,[k]:v} : l));
+
+  // Pieza
+  const [horas, setHoras] = useState("");
+  const [minutos, setMinutos] = useState("");
+  const [insumos, setInsumos] = useState("");
+  const [multiplicador, setMultiplicador] = useState(5);
+  const [resultado, setResultado] = useState(null);
+
+  const saveGastos = g => { setGastos(g); try { localStorage.setItem("lenga_calc_cfg", JSON.stringify(g)); } catch {} };
+  const setG = (k,v) => saveGastos({...gastos,[k]:v});
+
+  const disponibles = filamentos.filter(f => f.stockGramos > 0);
+
+  const calcular = () => {
+    const tiempoH = (Number(horas)||0) + (Number(minutos)||0)/60;
+    const lineasValidas = lineas.filter(l => l.key && l.gramos && Number(l.gramos) > 0);
+    if (lineasValidas.length === 0) { alert("Agregá al menos un filamento con gramos."); return; }
+
+    // Costo material
+    const costoMaterial = lineasValidas.reduce((a, l) => {
+      const fil = filamentos.find(f => f.key === l.key);
+      return a + (fil ? (fil.precioUltimo / fil.pesoUnitario) * Number(l.gramos) : 0);
+    }, 0);
+    const totalGramos = lineasValidas.reduce((a,l) => a + Number(l.gramos), 0);
+
+    // Costo luz
+    const costoLuz = tiempoH > 0 ? (gastos.consumoW / 1000) * tiempoH * gastos.precioKwh : 0;
+
+    // Desgaste máquina (precio repuestos / horas de vida)
+    const costoMaquina = tiempoH > 0 && gastos.hsMaquina > 0
+      ? (gastos.precioRepuestos / gastos.hsMaquina) * tiempoH : 0;
+
+    // Margen de error sobre material
+    const margenErrorARS = costoMaterial * (gastos.margenError / 100);
+
+    // Insumos extra
+    const costoInsumos = Number(insumos) || 0;
+
+    const subtotal = costoMaterial + costoLuz + costoMaquina + margenErrorARS + costoInsumos;
+    const totalVenta = subtotal * multiplicador;
+    const totalML = totalVenta * 1.18; // MercadoLibre ~18%
+
+    setResultado({ costoMaterial, costoLuz, costoMaquina, margenErrorARS, costoInsumos, subtotal, totalVenta, totalML, totalGramos, tiempoH });
+  };
+
+  const InputNum = ({label, val, onChange, placeholder, suffix}) => (
+    <div>
+      <div className="lbl">{label}{suffix && <span style={{color:"#444",marginLeft:4,fontSize:9}}>{suffix}</span>}</div>
+      <input className="inp" type="number" min={0} placeholder={placeholder||"0"} value={val} onChange={e=>onChange(e.target.value)}/>
+    </div>
+  );
+
+  return (
+    <div style={{maxWidth:640}}>
+      <div className="section-title">Calculadora de costo</div>
+
+      {/* Config gastos fijos */}
+      <div className="card" style={{marginBottom:14}}>
+        <button onClick={()=>setShowGastos(v=>!v)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",width:"100%",background:"none",border:"none",cursor:"pointer",padding:0}}>
+          <div style={{fontSize:12,color:"#aaa",fontWeight:700,letterSpacing:".06em",textTransform:"uppercase"}}>⚙ Gastos fijos de la máquina</div>
+          <span style={{fontSize:10,color:"#555"}}>{showGastos?"▲ Ocultar":"▼ Editar"}</span>
+        </button>
+        {showGastos && (
+          <div style={{marginTop:16,display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}} className="form-grid">
+            <InputNum label="Precio kWh" suffix="ARS" val={gastos.precioKwh} onChange={v=>setG("precioKwh",Number(v))} placeholder="140"/>
+            <InputNum label="Consumo real impresora" suffix="W" val={gastos.consumoW} onChange={v=>setG("consumoW",Number(v))} placeholder="120"/>
+            <InputNum label="Vida útil máquina" suffix="horas" val={gastos.hsMaquina} onChange={v=>setG("hsMaquina",Number(v))} placeholder="4320"/>
+            <InputNum label="Precio repuestos estimados" suffix="ARS" val={gastos.precioRepuestos} onChange={v=>setG("precioRepuestos",Number(v))} placeholder="150000"/>
+            <InputNum label="Margen de error material" suffix="%" val={gastos.margenError} onChange={v=>setG("margenError",Number(v))} placeholder="10"/>
+          </div>
+        )}
+        {!showGastos && (
+          <div style={{marginTop:10,display:"flex",gap:16,flexWrap:"wrap"}}>
+            {[["kWh",`${fmtARS(gastos.precioKwh)}`],["Consumo",`${gastos.consumoW}W`],["Vida máq.",`${gastos.hsMaquina}hs`],["Error mat.",`${gastos.margenError}%`]].map(([k,v])=>(
+              <div key={k} style={{fontSize:11,color:"#444"}}>{k}: <span style={{color:"#666",fontWeight:600}}>{v}</span></div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Filamentos */}
+      <div className="card" style={{marginBottom:14}}>
+        <div style={{fontSize:12,color:"#aaa",fontWeight:700,marginBottom:14,letterSpacing:".06em",textTransform:"uppercase"}}>Filamentos de la pieza</div>
+        {lineas.map((linea,i) => {
+          const fil = filamentos.find(f => f.key===linea.key);
+          const costoParcial = fil && linea.gramos ? (fil.precioUltimo/fil.pesoUnitario)*Number(linea.gramos) : null;
+          return (
+            <div key={i} className="imp-row">
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                <span style={{fontSize:11,color:"#555",fontWeight:700,letterSpacing:".06em"}}>FILAMENTO {i+1}</span>
+                {lineas.length>1 && <button className="btn-sm" onClick={()=>setLineas(ls=>ls.filter((_,idx)=>idx!==i))}>Quitar</button>}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <div style={{gridColumn:"1/-1"}}>
+                  <div className="lbl">Filamento</div>
+                  <select className="inp" value={linea.key} onChange={e=>setLinea(i,"key",e.target.value)}>
+                    <option value="">— Seleccioná —</option>
+                    {disponibles.map(f=><option key={f.key} value={f.key}>{f.color} · {f.tipo} · {f.material} · {f.marca} ({fmtG(f.stockGramos)}g)</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div className="lbl">Gramos</div>
+                  <input className="inp" type="number" min={1} placeholder="Ej: 45" value={linea.gramos} onChange={e=>setLinea(i,"gramos",e.target.value)}/>
+                </div>
+                <div style={{display:"flex",alignItems:"flex-end"}}>
+                  {fil && linea.gramos && costoParcial !== null && (
+                    <div style={{background:"#0d0d0d",borderRadius:8,padding:"11px 14px",fontSize:12,border:"1px solid #1e1e1e",width:"100%"}}>
+                      Costo: <span style={{color:"#4b7d0b",fontWeight:700}}>{fmtARS(costoParcial)}</span>
+                      <span style={{color:"#333",marginLeft:8,fontSize:10}}>{fmtARS(fil.precioUltimo/fil.pesoUnitario)}/g</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        <button className="btn-add" style={{alignSelf:"flex-start",marginTop:4}} onClick={()=>setLineas(ls=>[...ls,{...emptyLinea}])}>+ Agregar filamento</button>
+      </div>
+
+      {/* Tiempo e insumos */}
+      <div className="card" style={{marginBottom:14}}>
+        <div style={{fontSize:12,color:"#aaa",fontWeight:700,marginBottom:14,letterSpacing:".06em",textTransform:"uppercase"}}>Tiempo e insumos adicionales</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}} className="form-grid">
+          <InputNum label="Horas de impresión" suffix="hs" val={horas} onChange={setHoras} placeholder="0"/>
+          <InputNum label="Minutos" suffix="min" val={minutos} onChange={setMinutos} placeholder="0"/>
+          <InputNum label="Insumos extra" suffix="ARS" val={insumos} onChange={setInsumos} placeholder="Ej: 500"/>
+        </div>
+      </div>
+
+      {/* Multiplicador */}
+      <div className="card" style={{marginBottom:14}}>
+        <div style={{fontSize:12,color:"#aaa",fontWeight:700,marginBottom:12,letterSpacing:".06em",textTransform:"uppercase"}}>Margen de ganancia</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:12,alignItems:"center"}}>
+          <InputNum label="Multiplicador" val={multiplicador} onChange={v=>setMultiplicador(Number(v))} placeholder="5"/>
+          <div style={{padding:"10px 14px",background:"#0d0d0d",borderRadius:8,border:"1px solid #1e1e1e",fontSize:11,color:"#444",lineHeight:1.8}}>
+            <div>× 4 → Precio minorista</div>
+            <div>× 3 → Precio mayorista</div>
+            <div>× 5 → Precio llave en mano</div>
+          </div>
+        </div>
+      </div>
+
+      <button className="btn" onClick={calcular} style={{marginBottom:20}}>Calcular precio</button>
+
+      {/* Resultado */}
+      {resultado && (
+        <div className="card">
+          <div style={{fontSize:12,color:"#aaa",fontWeight:700,marginBottom:16,letterSpacing:".06em",textTransform:"uppercase"}}>Resultado</div>
+          {[
+            ["Costo material",         fmtARS(resultado.costoMaterial),  false],
+            ["Costo luz",              fmtARS(resultado.costoLuz),        false],
+            ["Desgaste máquina",       fmtARS(resultado.costoMaquina),    false],
+            ["Margen de error material",fmtARS(resultado.margenErrorARS), false],
+            ["Insumos adicionales",    fmtARS(resultado.costoInsumos),    false],
+          ].map(([label,val,bold])=>(
+            <div key={label} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid #1a1a1a",fontSize:12}}>
+              <span style={{color:"#666"}}>{label}</span>
+              <span style={{color:"#aaa",fontWeight:bold?700:500}}>{val}</span>
+            </div>
+          ))}
+          <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:"1px solid #1a1a1a",fontSize:12}}>
+            <span style={{color:"#888",fontWeight:600}}>Subtotal (costo)</span>
+            <span style={{color:"#888",fontWeight:700}}>{fmtARS(resultado.subtotal)}</span>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",padding:"12px 0",borderBottom:"1px solid #252525",fontSize:14}}>
+            <span style={{color:"#ccc",fontWeight:700}}>Precio de venta (×{multiplicador})</span>
+            <span style={{color:"#4b7d0b",fontWeight:800,fontSize:16}}>{fmtARS(resultado.totalVenta)}</span>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",fontSize:12}}>
+            <span style={{color:"#555"}}>Precio MercadoLibre (+18%)</span>
+            <span style={{color:"#888",fontWeight:600}}>{fmtARS(resultado.totalML)}</span>
+          </div>
+          {resultado.tiempoH > 0 && (
+            <div style={{marginTop:12,padding:"10px 14px",background:"#0d0d0d",borderRadius:8,border:"1px solid #1e1e1e",fontSize:11,color:"#444",display:"flex",gap:20,flexWrap:"wrap"}}>
+              <span>Tiempo: <strong style={{color:"#666"}}>{fmtG(resultado.tiempoH)}hs</strong></span>
+              <span>Material: <strong style={{color:"#666"}}>{fmtG(resultado.totalGramos)}g</strong></span>
+              <span>Costo/hora: <strong style={{color:"#666"}}>{resultado.tiempoH>0?fmtARS(resultado.subtotal/resultado.tiempoH):"-"}</strong></span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
