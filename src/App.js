@@ -44,19 +44,18 @@ const STOCK_INICIAL = [
   { material:"PLA",     tipo:"Normal",     marca:"Grilon3", color:"Tan",             stockGramos:686,    precioUltimo:15000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 10" },
   { material:"PLA",     tipo:"Normal",     marca:"Grilon3", color:"Verde",           stockGramos:72,     precioUltimo:15000, pesoUnitario:1000, estante:"Estante Bajo",  posicion:"AT 6" },
   { material:"PLA",     tipo:"Metal",      marca:"Grilon3", color:"Verde Militar",   stockGramos:956,    precioUltimo:18000, pesoUnitario:1000, estante:"Estante Alto",  posicion:"AD 2" },
-].map((f,i) => ({ ...f, key: `${f.material}__${f.tipo}__${f.marca}__${f.color}__${i}`.toLowerCase().trim() }));
+].map((f,i) => ({ ...f, key: `fil_${i}_${f.material}_${f.color}`.toLowerCase().replace(/\s/g,"_") }));
 
 function loadLS(key, def) {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch { return def; }
 }
 function saveLS(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
 
-// ── CSS ──────────────────────────────────────────────────────────────────────
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@600;700;800&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #0a0a0a; }
-  input, select { outline: none; -webkit-appearance: none; appearance: none; }
+  input, select, textarea { outline: none; -webkit-appearance: none; appearance: none; }
   input:focus, select:focus { border-color: #e8ff00 !important; box-shadow: 0 0 0 3px #e8ff0015 !important; }
   .tab { background: none; border: none; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 12px; padding: 14px 16px; color: #444; transition: all .2s; letter-spacing: .08em; border-bottom: 2px solid transparent; white-space: nowrap; }
   .tab.on { color: #e8ff00; border-bottom-color: #e8ff00; }
@@ -65,25 +64,30 @@ const CSS = `
   .lbl { font-size: 10px; letter-spacing: .12em; color: #555; margin-bottom: 7px; text-transform: uppercase; font-family: 'DM Mono', monospace; }
   .inp { width: 100%; background: #0a0a0a; border: 1px solid #222; border-radius: 8px; padding: 11px 14px; color: #e0e0e0; font-family: 'DM Mono', monospace; font-size: 13px; transition: all .2s; }
   .inp::placeholder { color: #333; }
+  .inp-sm { background: #0a0a0a; border: 1px solid #222; border-radius: 6px; padding: 5px 10px; color: #e0e0e0; font-family: 'DM Mono', monospace; font-size: 12px; transition: all .2s; }
+  .inp-sm:focus { border-color: #e8ff00 !important; outline: none; }
   select.inp option { background: #111; color: #e0e0e0; }
   .btn { background: #e8ff00; color: #0a0a0a; border: none; border-radius: 8px; padding: 13px 28px; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; cursor: pointer; letter-spacing: .06em; transition: all .2s; width: 100%; }
   .btn:hover { background: #fff; transform: translateY(-1px); }
   .btn:active { transform: translateY(0); }
-  .btn-add { background: none; border: 1px solid #333; border-radius: 6px; padding: 6px 12px; color: #666; font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 5px; }
+  .btn-add { background: none; border: 1px solid #333; border-radius: 6px; padding: 6px 12px; color: #666; font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
   .btn-add:hover { border-color: #e8ff00; color: #e8ff00; }
-  .btn-del { background: none; border: none; color: #333; cursor: pointer; font-size: 14px; padding: 2px 6px; transition: color .2s; line-height: 1; }
-  .btn-del:hover { color: #ff4444; }
+  .btn-icon { background: none; border: none; cursor: pointer; padding: 3px 6px; font-size: 13px; transition: all .2s; line-height: 1; border-radius: 4px; }
+  .btn-icon:hover { background: #1a1a1a; }
   .bar { height: 3px; background: #1a1a1a; border-radius: 2px; overflow: hidden; margin-top: 8px; }
   .bar-fill { height: 100%; border-radius: 2px; transition: width .6s; }
   .loc-badge { display: inline-flex; align-items: center; gap: 4px; border-radius: 5px; padding: 2px 7px; font-size: 10px; letter-spacing: .05em; font-family: 'DM Mono', monospace; }
-  .tag { display: inline-flex; align-items: center; gap: 6px; background: #161616; border: 1px solid #222; border-radius: 6px; padding: 5px 10px; font-size: 12px; color: #aaa; }
+  .tag { display: inline-flex; align-items: center; gap: 4px; background: #161616; border: 1px solid #222; border-radius: 6px; padding: 4px 4px 4px 10px; font-size: 12px; color: #aaa; }
   .section-title { font-family: 'Syne', sans-serif; font-size: 17px; font-weight: 700; color: #fff; margin-bottom: 20px; }
+  .modal-overlay { position: fixed; inset: 0; background: #000000cc; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal { background: #111; border: 1px solid #2a2a2a; border-radius: 14px; padding: 28px; width: 100%; max-width: 360px; }
   ::-webkit-scrollbar { width: 3px; } ::-webkit-scrollbar-track { background: #0a0a0a; } ::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
   @media (max-width: 640px) {
     .stats-grid { grid-template-columns: 1fr 1fr !important; }
     .charts-grid { grid-template-columns: 1fr !important; }
     .tbl-row { grid-template-columns: 1fr 1fr !important; }
     .form-grid { grid-template-columns: 1fr !important; }
+    .maest-grid { grid-template-columns: 1fr !important; }
     .header-inner { flex-direction: column; align-items: flex-start !important; }
     .tabs-row { overflow-x: auto; width: 100%; }
   }
@@ -91,7 +95,6 @@ const CSS = `
 
 const ESTANTE_COLOR = { "Estante Alto":"#e8ff00", "Estante Medio":"#ffaa00", "Estante Bajo":"#66aaff" };
 
-// ── APP ───────────────────────────────────────────────────────────────────────
 export default function App() {
   const [tab, setTab]               = useState("dashboard");
   const [filamentos, setFilamentos] = useState([]);
@@ -101,8 +104,8 @@ export default function App() {
   const [toast, setToast]           = useState(null);
 
   useEffect(() => {
-    const f = loadLS(DB_KEY, null);
-    const m = loadLS(MOV_KEY, []);
+    const f  = loadLS(DB_KEY, null);
+    const m  = loadLS(MOV_KEY, []);
     const ma = loadLS(MAEST_KEY, null);
     setFilamentos(f && f.length > 0 ? f : STOCK_INICIAL);
     if (!f || f.length === 0) saveLS(DB_KEY, STOCK_INICIAL);
@@ -116,8 +119,41 @@ export default function App() {
   const saveMaes = d => { setMaestros(d);   saveLS(MAEST_KEY, d); };
   const toast_   = msg => { setToast(msg);  setTimeout(() => setToast(null), 2800); };
 
+  // Rename propagates to filamentos + movimientos
+  const handleRename = (lista, oldVal, newVal) => {
+    const fieldMap = {
+      materiales: "material",
+      tipos:      "tipo",
+      marcas:     "marca",
+      colores:    "color",
+      estantes:   "estante",
+      posiciones: "posicion",
+    };
+    const field = fieldMap[lista];
+    const newFils = filamentos.map(f => f[field] === oldVal ? { ...f, [field]: newVal } : f);
+    const newMovs = movimientos.map(m => {
+      const mField = field === "tipo" ? "tipo_fil" : field;
+      return m[mField] === oldVal ? { ...m, [mField]: newVal } : m;
+    });
+    saveFil(newFils);
+    saveMov(newMovs);
+    const newMaest = { ...maestros, [lista]: maestros[lista].map(x => x === oldVal ? newVal : x) };
+    saveMaes(newMaest);
+    toast_(`✓ "${oldVal}" renombrado a "${newVal}" en todos los registros`);
+  };
+
+  const handleDelete = (lista, val) => {
+    const newMaest = { ...maestros, [lista]: maestros[lista].filter(x => x !== val) };
+    saveMaes(newMaest);
+  };
+
+  const handleAdd = (lista, val) => {
+    const newMaest = { ...maestros, [lista]: [...maestros[lista], val] };
+    saveMaes(newMaest);
+  };
+
   const handleCompra = c => {
-    const key = `${c.material}__${c.tipo}__${c.marca}__${c.color}__${Date.now()}`.toLowerCase();
+    const key = `fil_${Date.now()}`;
     const pesoTotal = c.pesoUnitario * c.cantidad;
     saveFil([...filamentos, { key, material:c.material, tipo:c.tipo, marca:c.marca, color:c.color, stockGramos:pesoTotal, precioUltimo:c.precio, pesoUnitario:c.pesoUnitario, estante:c.estante, posicion:c.posicion }]);
     saveMov([...movimientos, { id:Date.now(), tipo:"compra", fecha:new Date().toISOString(), key, material:c.material, tipo_fil:c.tipo, marca:c.marca, color:c.color, gramos:pesoTotal, precio:c.precio, cantidad:c.cantidad }]);
@@ -139,7 +175,6 @@ export default function App() {
       {toast && <div style={{position:"fixed",top:16,right:16,background:"#0f1a00",border:"1px solid #e8ff0033",borderRadius:10,padding:"12px 18px",fontSize:12,color:"#e8ff00",zIndex:9999,letterSpacing:"0.04em",boxShadow:"0 8px 32px #00000066",maxWidth:320}}>{toast}</div>}
 
       <div style={{maxWidth:980,margin:"0 auto",padding:"0 20px"}}>
-        {/* Header */}
         <div style={{borderBottom:"1px solid #161616",paddingTop:24}}>
           <div className="header-inner" style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
             <div style={{paddingBottom:16}}>
@@ -153,20 +188,19 @@ export default function App() {
             </div>
           </div>
         </div>
-
         <div style={{paddingTop:28,paddingBottom:48}}>
           {tab==="dashboard"  && <Dashboard filamentos={filamentos} movimientos={movimientos}/>}
           {tab==="compra"     && <FormCompra maestros={maestros} onSubmit={handleCompra}/>}
           {tab==="impresion"  && <FormImpresion filamentos={filamentos} onSubmit={handleImpresion}/>}
           {tab==="historial"  && <Historial movimientos={movimientos}/>}
-          {tab==="maestros"   && <Maestros maestros={maestros} onChange={saveMaes}/>}
+          {tab==="maestros"   && <Maestros maestros={maestros} onAdd={handleAdd} onDelete={handleDelete} onRename={handleRename}/>}
         </div>
       </div>
     </div>
   );
 }
 
-// ── DASHBOARD ────────────────────────────────────────────────────────────────
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
 function Dashboard({ filamentos, movimientos }) {
   const totalStock      = filamentos.reduce((a,f)=>a+f.stockGramos,0);
   const valorInventario = filamentos.reduce((a,f)=>a+(f.precioUltimo/f.pesoUnitario)*f.stockGramos,0);
@@ -230,7 +264,7 @@ function Dashboard({ filamentos, movimientos }) {
 
       <div className="card">
         <div style={{fontSize:10,color:"#444",letterSpacing:".12em",textTransform:"uppercase",marginBottom:14}}>Detalle de stock</div>
-        <div style={{display:"grid",gridTemplateColumns:"1.6fr 0.7fr 0.7fr 0.8fr 1fr 1.4fr 0.7fr",gap:10,padding:"0 0 10px",borderBottom:"1px solid #1a1a1a",marginBottom:2}}>
+        <div style={{display:"grid",gridTemplateColumns:"1.4fr 0.7fr 0.7fr 0.8fr 1fr 1.4fr 0.7fr",gap:10,padding:"0 0 10px",borderBottom:"1px solid #1a1a1a",marginBottom:2}}>
           {["Color","Material","Tipo","Marca","Stock","Ubicación","Valor"].map(h=>(
             <div key={h} style={{fontSize:9,color:"#333",letterSpacing:".1em",textTransform:"uppercase"}}>{h}</div>
           ))}
@@ -242,7 +276,7 @@ function Dashboard({ filamentos, movimientos }) {
             const bajo=f.stockGramos>0&&f.stockGramos<STOCK_MINIMO;
             const ec=ESTANTE_COLOR[f.estante]||"#555";
             return (
-              <div key={f.key} className="tbl-row" style={{display:"grid",gridTemplateColumns:"1.6fr 0.7fr 0.7fr 0.8fr 1fr 1.4fr 0.7fr",gap:10,alignItems:"center",borderBottom:"1px solid #161616",padding:"11px 0"}}>
+              <div key={f.key} className="tbl-row" style={{display:"grid",gridTemplateColumns:"1.4fr 0.7fr 0.7fr 0.8fr 1fr 1.4fr 0.7fr",gap:10,alignItems:"center",borderBottom:"1px solid #161616",padding:"11px 0"}}>
                 <div style={{fontSize:13,color:"#e0e0e0",fontWeight:500}}>{f.color}</div>
                 <div style={{fontSize:11,color:"#555"}}>{f.material}</div>
                 <div style={{fontSize:10,color:"#444"}}>{f.tipo}</div>
@@ -399,21 +433,59 @@ function Historial({ movimientos }) {
 }
 
 // ── MAESTROS ──────────────────────────────────────────────────────────────────
-function Maestros({ maestros, onChange }) {
-  const [newVals, setNewVals] = useState({materiales:"",tipos:"",marcas:"",colores:"",estantes:"",posiciones:""});
+function EditModal({ value, onSave, onClose }) {
+  const [val, setVal] = useState(value);
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:13,color:"#aaa",marginBottom:16}}>Editar valor</div>
+        <input
+          className="inp"
+          value={val}
+          onChange={e=>setVal(e.target.value)}
+          onKeyDown={e=>{ if(e.key==="Enter") onSave(val); if(e.key==="Escape") onClose(); }}
+          autoFocus
+        />
+        <div style={{display:"flex",gap:8,marginTop:14}}>
+          <button
+            onClick={()=>onSave(val)}
+            style={{flex:1,background:"#e8ff00",color:"#0a0a0a",border:"none",borderRadius:8,padding:"10px",fontFamily:"'DM Mono',monospace",fontSize:12,cursor:"pointer",fontWeight:500}}
+          >
+            Guardar
+          </button>
+          <button
+            onClick={onClose}
+            style={{flex:1,background:"none",color:"#666",border:"1px solid #333",borderRadius:8,padding:"10px",fontFamily:"'DM Mono',monospace",fontSize:12,cursor:"pointer"}}
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  const add = (lista) => {
+function Maestros({ maestros, onAdd, onDelete, onRename }) {
+  const [newVals, setNewVals] = useState({materiales:"",tipos:"",marcas:"",colores:"",estantes:"",posiciones:""});
+  const [editing, setEditing] = useState(null); // { lista, value }
+
+  const add = lista => {
     const val = newVals[lista].trim();
     if (!val) return;
     if (maestros[lista].includes(val)) return alert("Ya existe en la lista.");
-    const updated = { ...maestros, [lista]: [...maestros[lista], val] };
-    onChange(updated);
+    onAdd(lista, val);
     setNewVals(v=>({...v,[lista]:""}));
   };
 
-  const remove = (lista, item) => {
-    if (!window.confirm(`¿Eliminás "${item}" de la lista?`)) return;
-    onChange({ ...maestros, [lista]: maestros[lista].filter(x=>x!==item) });
+  const startEdit = (lista, value) => setEditing({ lista, value });
+
+  const saveEdit = newVal => {
+    const trimmed = newVal.trim();
+    if (!trimmed) return;
+    if (trimmed === editing.value) { setEditing(null); return; }
+    if (maestros[editing.lista].includes(trimmed)) { alert("Ya existe ese valor."); return; }
+    onRename(editing.lista, editing.value, trimmed);
+    setEditing(null);
   };
 
   const LISTAS = [
@@ -427,8 +499,15 @@ function Maestros({ maestros, onChange }) {
 
   return (
     <div>
+      {editing && (
+        <EditModal
+          value={editing.value}
+          onSave={saveEdit}
+          onClose={()=>setEditing(null)}
+        />
+      )}
       <div className="section-title">Maestros</div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+      <div className="maest-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
         {LISTAS.map(({key,label})=>(
           <div key={key} className="card">
             <div style={{fontSize:12,color:"#aaa",fontWeight:500,marginBottom:14,letterSpacing:".04em"}}>{label}</div>
@@ -436,14 +515,26 @@ function Maestros({ maestros, onChange }) {
               {maestros[key].map(item=>(
                 <span key={item} className="tag">
                   {item}
-                  <button className="btn-del" onClick={()=>remove(key,item)} title="Eliminar">×</button>
+                  <button
+                    className="btn-icon"
+                    title="Editar"
+                    onClick={()=>startEdit(key,item)}
+                    style={{color:"#555"}}
+                  >✎</button>
+                  <button
+                    className="btn-icon"
+                    title="Eliminar"
+                    onClick={()=>{ if(window.confirm(`¿Eliminás "${item}"?`)) onDelete(key,item); }}
+                    style={{color:"#444"}}
+                  >×</button>
                 </span>
               ))}
               {maestros[key].length===0&&<span style={{fontSize:11,color:"#333"}}>Sin elementos</span>}
             </div>
             <div style={{display:"flex",gap:8}}>
               <input
-                className="inp" style={{flex:1,padding:"8px 12px",fontSize:12}}
+                className="inp"
+                style={{flex:1,padding:"8px 12px",fontSize:12}}
                 placeholder={`Agregar ${label.toLowerCase()}...`}
                 value={newVals[key]}
                 onChange={e=>setNewVals(v=>({...v,[key]:e.target.value}))}
