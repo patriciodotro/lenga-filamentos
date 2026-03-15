@@ -394,7 +394,7 @@ function Dashboard({ filamentos, movimientos }) {
           </div>
           <div>
             <div className="lbl">Filtrar por material</div>
-            <input className="inp" style={{padding:"8px 12px",fontSize:12}} placeholder="Ej: PLA..." value={searchMaterial} onChange={e=>setSearchTipo(e.target.value)}/>
+            <input className="inp" style={{padding:"8px 12px",fontSize:12}} placeholder="Ej: PLA..." value={searchMaterial} onChange={e=>setSearchMaterial(e.target.value)}/>
           </div>
         </div>
         {(searchColor||searchMarca||searchMaterial)&&(
