@@ -145,9 +145,16 @@ export default function App() {
     const f  = loadLS(DB_KEY, null);
     const m  = loadLS(MOV_KEY, []);
     const ma = loadLS(MAEST_KEY, null);
-    setFilamentos(f && f.length > 0 ? f : STOCK_INICIAL);
-    if (!f || f.length === 0) saveLS(DB_KEY, STOCK_INICIAL);
-    setMovs(m);
+    // Migration: fix color names that had position appended in old versions
+    const COLOR_FIX = {
+      "Natural AT1":"Natural","Natural AT2-3-4":"Natural","Natural (Alto)":"Natural","Natural (Bajo)":"Natural",
+      "Negro AT5":"Negro","Negro AT2-3":"Negro","Negro (Bajo)":"Negro","Negro (Medio)":"Negro",
+    };
+    const fixColor = c => COLOR_FIX[c] || c;
+    const filData = f && f.length > 0 ? f.map(x=>({...x,color:fixColor(x.color)})) : STOCK_INICIAL;
+    const movData = (m||[]).map(x=>({...x,color:fixColor(x.color)}));
+    saveLS(DB_KEY, filData); saveLS(MOV_KEY, movData);
+    setFilamentos(filData); setMovs(movData);
     setMaestros(ma || MAESTROS_DEFAULT);
     setLoaded(true);
   }, []);
