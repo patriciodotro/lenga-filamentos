@@ -14,11 +14,11 @@ const MAESTROS_DEFAULT = {
   estantes:   ["Estante Alto", "Estante Medio", "Estante Bajo"],
   posiciones: ["AD 1","AD 2","AD 3","AD 4","AD 5","AD 6","AD 7","AD 8","AD 9","AD 10","AT 1","AT 2","AT 3","AT 4","AT 5","AT 6","AT 7","AT 8","AT 9","AT 10","AT 1 2","AT 2 3","AT 3 4","AT 5 6","AT 6 7","AT 7 8","AT 8 9","AT 7 8 9","AT 2 3 4","AD 1 2 3","AD 6 7"],
   bobinas:    [
-    { marca:"Grilon3",             pesoBobina:217.5 },
-    { marca:"PrintaLot plastico",  pesoBobina:155   },
-    { marca:"PrintaLot carton",    pesoBobina:200   },
-    { marca:"IIID MAX",            pesoBobina:142.3 },
-    { marca:"Bambu Lab",           pesoBobina:216   },
+    { marca:"Grilon3",              pesoBobina:217.5 },
+    { marca:"PrintaLot - Plastico", pesoBobina:155   },
+    { marca:"PrintaLot - Carton",   pesoBobina:200   },
+    { marca:"IIID MAX",             pesoBobina:142.3 },
+    { marca:"Bambu Lab",            pesoBobina:216   },
   ],
 };
 
@@ -688,6 +688,10 @@ function AjusteStock({ filamentos, maestros, onAjuste }) {
   const [pesoBrutoCargado, setPesoBrutoCargado] = useState("");
   const [marcaBobina, setMarcaBobina] = useState("");
   const [confirmado, setConfirmado] = useState(false);
+  const [filtColor, setFiltColor]       = useState("");
+  const [filtMaterial, setFiltMaterial] = useState("");
+  const [filtTipo, setFiltTipo]         = useState("");
+  const [filtMarca, setFiltMarca]       = useState("");
 
   const bobinas = maestros.bobinas || [];
   const fil = filamentos.find(f => f.key === selectedKey);
@@ -695,7 +699,7 @@ function AjusteStock({ filamentos, maestros, onAjuste }) {
   const stockNeto = pesoBrutoCargado && pesoBobin ? Math.max(0, Number(pesoBrutoCargado) - pesoBobin) : null;
   const diferencia = fil && stockNeto !== null ? stockNeto - fil.stockGramos : null;
 
-  const reset = () => { setSelectedKey(""); setPesoBrutoCargado(""); setMarcaBobina(""); setConfirmado(false); };
+  const reset = () => { setSelectedKey(""); setPesoBrutoCargado(""); setMarcaBobina(""); setConfirmado(false); setFiltColor(""); setFiltMaterial(""); setFiltTipo(""); setFiltMarca(""); };
 
   const submit = () => {
     if (!selectedKey || stockNeto === null) return alert("Completá todos los campos.");
@@ -704,9 +708,6 @@ function AjusteStock({ filamentos, maestros, onAjuste }) {
     reset();
   };
 
-  // Group filamentos for display
-  const sorted = [...filamentos].sort((a,b)=>a.color.localeCompare(b.color));
-
   return (
     <div style={{maxWidth:560}}>
       <div className="section-title">Ajuste de stock</div>
@@ -714,13 +715,49 @@ function AjusteStock({ filamentos, maestros, onAjuste }) {
         Usá esta sección para corregir el stock de una bobina pesándola en ese momento. Ingresá el peso bruto (bobina + filamento) y el sistema descuenta el peso de la bobina vacía automáticamente.
       </div>
       <div className="card" style={{display:"flex",flexDirection:"column",gap:16}}>
+        {/* Cascading filters */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div>
+            <div className="lbl">Filtrar por color</div>
+            <select className="inp" value={filtColor} onChange={e=>{setFiltColor(e.target.value);setSelectedKey("");setConfirmado(false);}}>
+              <option value="">— Todos —</option>
+              {[...new Set(filamentos.map(f=>f.color))].sort().map(c=><option key={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <div className="lbl">Filtrar por material</div>
+            <select className="inp" value={filtMaterial} onChange={e=>{setFiltMaterial(e.target.value);setSelectedKey("");setConfirmado(false);}}>
+              <option value="">— Todos —</option>
+              {[...new Set(filamentos.filter(f=>!filtColor||f.color===filtColor).map(f=>f.material))].sort().map(m=><option key={m}>{m}</option>)}
+            </select>
+          </div>
+          <div>
+            <div className="lbl">Filtrar por tipo</div>
+            <select className="inp" value={filtTipo} onChange={e=>{setFiltTipo(e.target.value);setSelectedKey("");setConfirmado(false);}}>
+              <option value="">— Todos —</option>
+              {[...new Set(filamentos.filter(f=>(!filtColor||f.color===filtColor)&&(!filtMaterial||f.material===filtMaterial)).map(f=>f.tipo))].sort().map(t=><option key={t}>{t}</option>)}
+            </select>
+          </div>
+          <div>
+            <div className="lbl">Filtrar por marca</div>
+            <select className="inp" value={filtMarca} onChange={e=>{setFiltMarca(e.target.value);setSelectedKey("");setConfirmado(false);}}>
+              <option value="">— Todas —</option>
+              {[...new Set(filamentos.filter(f=>(!filtColor||f.color===filtColor)&&(!filtMaterial||f.material===filtMaterial)&&(!filtTipo||f.tipo===filtTipo)).map(f=>f.marca))].sort().map(m=><option key={m}>{m}</option>)}
+            </select>
+          </div>
+        </div>
         <div>
-          <div className="lbl">Filamento a ajustar</div>
+          <div className="lbl">Seleccionar rollo específico</div>
           <select className="inp" value={selectedKey} onChange={e=>{setSelectedKey(e.target.value);setConfirmado(false);}}>
-            <option value="">— Seleccioná un filamento —</option>
-            {sorted.map(f=>(
+            <option value="">— Seleccioná un rollo —</option>
+            {filamentos.filter(f=>
+              (!filtColor||f.color===filtColor)&&
+              (!filtMaterial||f.material===filtMaterial)&&
+              (!filtTipo||f.tipo===filtTipo)&&
+              (!filtMarca||f.marca===filtMarca)
+            ).map(f=>(
               <option key={f.key} value={f.key}>
-                {f.color} · {f.tipo} · {f.material} · {f.marca} — Stock actual: {fmtG(f.stockGramos)}g{f.posicion?` (${f.posicion})`:""}
+                {f.color} · {f.tipo} · {f.material} · {f.marca} — {fmtG(f.stockGramos)}g{f.posicion?` (${f.posicion})`:""}
               </option>
             ))}
           </select>
@@ -738,7 +775,7 @@ function AjusteStock({ filamentos, maestros, onAjuste }) {
           <select className="inp" value={marcaBobina} onChange={e=>setMarcaBobina(e.target.value)}>
             <option value="">— Seleccioná marca de bobina —</option>
             {bobinas.map(b=>(
-              <option key={b.marca} value={b.marca}>{b.marca} — bobina vacía: {fmtG(b.pesoBobina)}g</option>
+              <option key={b.marca} value={b.marca}>{b.marca} ({fmtG(b.pesoBobina)}g)</option>
             ))}
           </select>
         </div>
