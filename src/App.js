@@ -184,27 +184,6 @@ export default function App() {
   const [ventas, setVentas]     = useState(() => loadLS(KEYS.ventas, []));
   const [proveedores, setProveedores] = useState(() => loadLS(KEYS.proveedores, []));
 
-  const save = (key, setter) => d => { setter(d); saveLS(key, d); };
-  const saveRecetas   = save(KEYS.recetas,    setRecetas);
-  const saveInsumos   = save(KEYS.insumos,    setInsumos);
-  const saveProductos = save(KEYS.productos,  setProductos);
-  const saveVentas    = save(KEYS.ventas,     setVentas);
-  const saveProveedores = save(KEYS.proveedores, setProveedores);
-
-  const toast_ = msg => { setToast(msg); setTimeout(()=>setToast(null),3000); };
-
-  const handleVenta = venta => {
-    saveVentas([...ventas, {...venta, id:uid(), fecha:new Date().toISOString()}]);
-    // Discount from finished products stock
-    if (venta.productoId && venta.cantidad) {
-      const newP = productos.map(p =>
-        p.id===venta.productoId ? {...p, stock:Math.max(0,(p.stock||0)-Number(venta.cantidad))} : p
-      );
-      saveProductos(newP);
-    }
-    toast_(`✓ Venta registrada`);
-  };
-
   useEffect(() => {
     const f  = loadLS(DB_KEY, null);
     const m  = loadLS(MOV_KEY, []);
@@ -225,8 +204,11 @@ export default function App() {
   const saveRecetas    = saveBiz(BIZ_KEYS.recetas,    setRecetas);
   const saveInsumos    = saveBiz(BIZ_KEYS.insumos,    setInsumos);
   const saveProductos  = saveBiz(BIZ_KEYS.productos,  setProductos);
-  const saveVentas_    = saveBiz(BIZ_KEYS.ventas,     setVentas);
+  const saveVentas     = saveBiz(BIZ_KEYS.ventas,     setVentas);
   const saveProveedores = saveBiz(BIZ_KEYS.proveedores, setProveedores);
+
+  const toast_   = msg => { setToast(msg);  setTimeout(() => setToast(null), 3000); };
+
   const handleVenta = venta => {
     saveVentas([...ventas, {...venta, id:uid(), fecha:new Date().toISOString()}]);
     // Discount from finished products stock
@@ -238,8 +220,6 @@ export default function App() {
     }
     toast_(`✓ Venta registrada`);
   };
-
-  const toast_   = msg => { setToast(msg);  setTimeout(() => setToast(null), 3000); };
 
   const handleRename = (lista, oldVal, newVal) => {
     const fm = { materiales:"material", tipos:"tipo", marcas:"marca", colores:"color", estantes:"estante", posiciones:"posicion" };
