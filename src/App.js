@@ -680,8 +680,6 @@ function FormImpresion({ filamentos, onSubmit }) {
         }
       </div>
 
-      {/* Stock table */}
-      <StockTabla filamentos={filamentos} onDelete={onDelete}/>
     </div>
   );
 }
@@ -1030,6 +1028,8 @@ function AjusteStock({ filamentos, maestros, onAjuste, onDelete }) {
           Aplicar ajuste de stock
         </button>
       </div>
+
+      <StockTabla filamentos={filamentos} onDelete={onDelete}/>
     </div>
   );
 }
@@ -1285,148 +1285,4 @@ function EditModal({ value, onSave, onClose }) {
   );
 }
 
-// ── MAESTROS ──────────────────────────────────────────────────────────────────
-function Maestros({ maestros, filamentos, onAdd, onDelete, onRename, onPrecioUpdate }) {
-  const [newVals,setNewVals]=useState({materiales:"",tipos:"",marcas:"",colores:"",estantes:"",posiciones:""});
-  const [editing,setEditing]=useState(null);
-  const add=lista=>{const val=newVals[lista].trim();if(!val)return;if(maestros[lista].includes(val))return alert("Ya existe.");onAdd(lista,val);setNewVals(v=>({...v,[lista]:""}));};
-  const saveEdit=nv=>{const t=nv.trim();if(!t)return;if(t===editing.value){setEditing(null);return;}if(maestros[editing.lista].includes(t)){alert("Ya existe.");return;}onRename(editing.lista,editing.value,t);setEditing(null);};
-  const LISTAS=[{key:"materiales",label:"Materiales"},{key:"tipos",label:"Tipos de filamento"},{key:"marcas",label:"Marcas"},{key:"colores",label:"Colores"},{key:"estantes",label:"Estantes"},{key:"posiciones",label:"Posiciones"}];
-  // Bobinas state
-  const [newBobina,setNewBobina] = useState({marca:"",pesoBobina:""});
-  const [editingBobina,setEditingBobina] = useState(null);
-  // Precios state
-  const [editingPrecio,setEditingPrecio] = useState(null); // {marca,material,tipo}
-  const [precioEdit,setPrecioEdit] = useState("");
-  return (
-    <div>
-      {editing&&<EditModal value={editing.value} onSave={saveEdit} onClose={()=>setEditing(null)}/>}
-      <div className="section-title">Maestros</div>
-      <div className="maest-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-        {LISTAS.map(({key,label})=>(
-          <div key={key} className="card">
-            <div style={{fontSize:12,color:"#aaa",fontWeight:700,marginBottom:14,letterSpacing:".04em",textTransform:"uppercase"}}>{label}</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14,minHeight:32}}>
-              {maestros[key].map(item=>(
-                <span key={item} className="tag">
-                  {item}
-                  <button className="btn-icon" title="Editar" onClick={()=>setEditing({lista:key,value:item})} style={{color:"#4b7d0b"}}>✎</button>
-                  <button className="btn-icon" title="Eliminar" onClick={()=>{if(window.confirm(`¿Eliminás "${item}"?`))onDelete(key,item);}} style={{color:"#555"}}>×</button>
-                </span>
-              ))}
-              {maestros[key].length===0&&<span style={{fontSize:11,color:"#333"}}>Sin elementos</span>}
-            </div>
-            <div style={{display:"flex",gap:8}}>
-              <input className="inp" style={{flex:1,padding:"8px 12px",fontSize:12}} placeholder={`Agregar ${label.toLowerCase()}...`} value={newVals[key]} onChange={e=>setNewVals(v=>({...v,[key]:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&add(key)}/>
-              <button className="btn-add" onClick={()=>add(key)}>+ Agregar</button>
-            </div>
-          </div>
-        ))}
-      </div>
 
-      {/* Precios por marca/material/tipo */}
-      <div style={{marginTop:14}} className="card">
-        <div style={{fontSize:12,color:"#aaa",fontWeight:700,marginBottom:14,letterSpacing:".04em",textTransform:"uppercase"}}>Precios de filamentos</div>
-        <div style={{fontSize:11,color:"#555",marginBottom:14}}>Editá el precio de una bobina de 1kg. El cambio se aplica a todos los filamentos de esa combinación.</div>
-        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-          <thead>
-            <tr style={{borderBottom:"1px solid #252525"}}>
-              {["Marca","Material","Tipo","Precio / kg","Cantidad",""].map((h,i)=>(
-                <th key={i} style={{textAlign:"left",padding:"6px 8px",fontSize:10,color:"#444",letterSpacing:".08em",textTransform:"uppercase",fontWeight:600}}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {Object.values(
-              (filamentos||[]).reduce((acc,f)=>{
-                const k=`${f.marca}||${f.material}||${f.tipo}`;
-                if(!acc[k]) acc[k]={marca:f.marca,material:f.material,tipo:f.tipo,precio:f.precioUltimo,count:0};
-                acc[k].count++;
-                return acc;
-              },{})
-            ).sort((a,b)=>a.marca.localeCompare(b.marca)||a.material.localeCompare(b.material)).map((row,i)=>{
-              const isEditing = editingPrecio && editingPrecio.marca===row.marca && editingPrecio.material===row.material && editingPrecio.tipo===row.tipo;
-              return (
-                <tr key={i} style={{borderBottom:"1px solid #1a1a1a"}}>
-                  <td style={{padding:"8px",color:"#ccc",fontWeight:500}}>{row.marca}</td>
-                  <td style={{padding:"8px",color:"#888"}}>{row.material}</td>
-                  <td style={{padding:"8px",color:"#666"}}>{row.tipo}</td>
-                  <td style={{padding:"8px 4px"}}>
-                    {isEditing ? (
-                      <input className="inp" type="number" style={{padding:"5px 10px",fontSize:12,width:120}}
-                        value={precioEdit} onChange={e=>setPrecioEdit(e.target.value)}
-                        onKeyDown={e=>{
-                          if(e.key==="Enter"&&precioEdit){onPrecioUpdate(row.marca,row.material,row.tipo,Number(precioEdit));setEditingPrecio(null);}
-                          if(e.key==="Escape") setEditingPrecio(null);
-                        }}
-                        autoFocus
-                      />
-                    ) : (
-                      <span style={{color:"#4b7d0b",fontWeight:700}}>{fmtARS(row.precio)}</span>
-                    )}
-                  </td>
-                  <td style={{padding:"8px",color:"#444",fontSize:11}}>{row.count} rollo{row.count!==1?"s":""}</td>
-                  <td style={{padding:"8px 4px"}}>
-                    {isEditing ? (
-                      <div style={{display:"flex",gap:6}}>
-                        <button className="btn-add" onClick={()=>{if(precioEdit){onPrecioUpdate(row.marca,row.material,row.tipo,Number(precioEdit));setEditingPrecio(null);}}} style={{borderColor:"#4b7d0b",color:"#4b7d0b"}}>✓ Guardar</button>
-                        <button className="btn-icon" style={{color:"#555"}} onClick={()=>setEditingPrecio(null)}>✕</button>
-                      </div>
-                    ) : (
-                      <button className="btn-icon" style={{color:"#4b7d0b"}} onClick={()=>{setEditingPrecio({marca:row.marca,material:row.material,tipo:row.tipo});setPrecioEdit(String(row.precio));}}>✎</button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pesos de bobinas */}
-      <div style={{marginTop:14}} className="card">
-        <div style={{fontSize:12,color:"#aaa",fontWeight:700,marginBottom:14,letterSpacing:".04em",textTransform:"uppercase"}}>Pesos de bobinas vacías</div>
-        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-          <thead>
-            <tr style={{borderBottom:"1px solid #252525"}}>
-              {["Marca bobina","Peso (g)",""].map(h=>(
-                <th key={h} style={{textAlign:"left",padding:"6px 8px",fontSize:10,color:"#444",letterSpacing:".08em",textTransform:"uppercase",fontWeight:600}}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {(maestros.bobinas||[]).map((b,i)=>(
-              <tr key={i} style={{borderBottom:"1px solid #1a1a1a"}}>
-                {editingBobina===i ? (
-                  <>
-                    <td style={{padding:"6px 4px"}}><input className="inp" style={{padding:"6px 10px",fontSize:12}} value={b.marca} onChange={e=>{const nb=[...maestros.bobinas];nb[i]={...nb[i],marca:e.target.value};onAdd("bobinas_update",nb);}}/></td>
-                    <td style={{padding:"6px 4px"}}><input className="inp" style={{padding:"6px 10px",fontSize:12,width:100}} type="number" value={b.pesoBobina} onChange={e=>{const nb=[...maestros.bobinas];nb[i]={...nb[i],pesoBobina:Number(e.target.value)};onAdd("bobinas_update",nb);}}/></td>
-                    <td style={{padding:"6px 4px"}}><button className="btn-add" onClick={()=>setEditingBobina(null)}>✓ Listo</button></td>
-                  </>
-                ) : (
-                  <>
-                    <td style={{padding:"8px",color:"#ccc",fontWeight:500}}>{b.marca}</td>
-                    <td style={{padding:"8px",color:"#4b7d0b",fontWeight:700}}>{fmtG(b.pesoBobina)}g</td>
-                    <td style={{padding:"8px",display:"flex",gap:6}}>
-                      <button className="btn-icon" style={{color:"#4b7d0b"}} onClick={()=>setEditingBobina(i)}>✎</button>
-                      <button className="btn-icon" style={{color:"#555"}} onClick={()=>{if(window.confirm(`¿Eliminás "${b.marca}"?`)){const nb=maestros.bobinas.filter((_,j)=>j!==i);onAdd("bobinas_update",nb);}}}>×</button>
-                    </td>
-                  </>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div style={{display:"flex",gap:8,marginTop:14}}>
-          <input className="inp" style={{flex:2,padding:"8px 12px",fontSize:12}} placeholder="Marca de bobina..." value={newBobina.marca} onChange={e=>setNewBobina(v=>({...v,marca:e.target.value}))}/>
-          <input className="inp" style={{width:110,padding:"8px 12px",fontSize:12}} type="number" placeholder="Peso (g)" value={newBobina.pesoBobina} onChange={e=>setNewBobina(v=>({...v,pesoBobina:e.target.value}))}/>
-          <button className="btn-add" onClick={()=>{
-            if(!newBobina.marca||!newBobina.pesoBobina) return;
-            onAdd("bobinas_update",[...(maestros.bobinas||[]),{marca:newBobina.marca,pesoBobina:Number(newBobina.pesoBobina)}]);
-            setNewBobina({marca:"",pesoBobina:""});
-          }}>+ Agregar</button>
-        </div>
-      </div>
-    </div>
-  );
-}
