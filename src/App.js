@@ -1,6 +1,21 @@
 import { useState, useEffect, useMemo } from "react";
 
 const STOCK_MINIMO = 100;
+
+const CANALES = ["MercadoLibre","Instagram","WhatsApp","Tienda web","En persona","Feria"];
+const ESTADOS = ["Pendiente","En producción","Listo","Enviado","Entregado","Cancelado"];
+const ESTADO_COLOR = {
+  "Pendiente":"#a07000","En producción":"#1a6b8a","Listo":"#4b7d0b",
+  "Enviado":"#6644aa","Entregado":"#2a7a2a","Cancelado":"#cc4444"
+};
+const BIZ_KEYS = {
+  recetas:    "lb_recetas",
+  insumos:    "lb_insumos",
+  productos:  "lb_productos",
+  ventas:     "lb_ventas",
+  proveedores:"lb_proveedores",
+};
+
 const DB_KEY    = "lenga_fil_db";
 const MOV_KEY   = "lenga_fil_mov";
 const MAEST_KEY = "lenga_maestros";
@@ -162,6 +177,34 @@ export default function App() {
   const [loaded, setLoaded]         = useState(false);
   const [toast, setToast]           = useState(null);
   const [showStockMenu, setShowStockMenu] = useState(false);
+  const [showNegocioMenu, setShowNegocioMenu] = useState(false);
+  const [recetas, setRecetas]   = useState(() => loadLS(KEYS.recetas, []));
+  const [insumos, setInsumos]   = useState(() => loadLS(KEYS.insumos, []));
+  const [productos, setProductos] = useState(() => loadLS(KEYS.productos, []));
+  const [ventas, setVentas]     = useState(() => loadLS(KEYS.ventas, []));
+  const [proveedores, setProveedores] = useState(() => loadLS(KEYS.proveedores, []));
+  const [toast, setToast]       = useState(null);
+
+  const save = (key, setter) => d => { setter(d); saveLS(key, d); };
+  const saveRecetas   = save(KEYS.recetas,    setRecetas);
+  const saveInsumos   = save(KEYS.insumos,    setInsumos);
+  const saveProductos = save(KEYS.productos,  setProductos);
+  const saveVentas    = save(KEYS.ventas,     setVentas);
+  const saveProveedores = save(KEYS.proveedores, setProveedores);
+
+  const toast_ = msg => { setToast(msg); setTimeout(()=>setToast(null),3000); };
+
+  const handleVenta = venta => {
+    saveVentas([...ventas, {...venta, id:uid(), fecha:new Date().toISOString()}]);
+    // Discount from finished products stock
+    if (venta.productoId && venta.cantidad) {
+      const newP = productos.map(p =>
+        p.id===venta.productoId ? {...p, stock:Math.max(0,(p.stock||0)-Number(venta.cantidad))} : p
+      );
+      saveProductos(newP);
+    }
+    toast_(`✓ Venta registrada`);
+  };
 
   useEffect(() => {
     const f  = loadLS(DB_KEY, null);
@@ -179,6 +222,24 @@ export default function App() {
   const saveFil  = d => { setFilamentos(d); saveLS(DB_KEY, d); };
   const saveMov  = d => { setMovs(d);       saveLS(MOV_KEY, d); };
   const saveMaes = d => { setMaestros(d);   saveLS(MAEST_KEY, d); };
+  const saveBiz = (key, setter) => d => { setter(d); saveLS(key, d); };
+  const saveRecetas    = saveBiz(BIZ_KEYS.recetas,    setRecetas);
+  const saveInsumos    = saveBiz(BIZ_KEYS.insumos,    setInsumos);
+  const saveProductos  = saveBiz(BIZ_KEYS.productos,  setProductos);
+  const saveVentas_    = saveBiz(BIZ_KEYS.ventas,     setVentas);
+  const saveProveedores = saveBiz(BIZ_KEYS.proveedores, setProveedores);
+  const handleVenta = venta => {
+    saveVentas([...ventas, {...venta, id:uid(), fecha:new Date().toISOString()}]);
+    // Discount from finished products stock
+    if (venta.productoId && venta.cantidad) {
+      const newP = productos.map(p =>
+        p.id===venta.productoId ? {...p, stock:Math.max(0,(p.stock||0)-Number(venta.cantidad))} : p
+      );
+      saveProductos(newP);
+    }
+    toast_(`✓ Venta registrada`);
+  };
+
   const toast_   = msg => { setToast(msg);  setTimeout(() => setToast(null), 3000); };
 
   const handleRename = (lista, oldVal, newVal) => {
@@ -265,6 +326,29 @@ export default function App() {
                 )}
               </div>
               <button className={`tab${tab==="calculadora"?" on":""}`} onClick={()=>{setTab("calculadora");setShowStockMenu(false);}}>Costo de impresión</button>
+              {/* Negocio dropdown */}
+              <div style={{position:"relative"}}>
+                <button
+                  className={`tab${["recetas","insumos","productos","ventas","proveedores","finanzas"].includes(tab)?" on":""}`}
+                  onClick={()=>{setShowNegocioMenu(v=>!v);setShowStockMenu(false);}}
+                  style={{display:"flex",alignItems:"center",gap:5}}
+                >
+                  Negocio
+                  <span style={{fontSize:9,opacity:0.6}}>{showNegocioMenu?"▲":"▼"}</span>
+                </button>
+                {showNegocioMenu && (
+                  <div style={{position:"absolute",top:"100%",right:0,background:"#141414",border:"1px solid #252525",borderRadius:10,zIndex:200,minWidth:180,padding:"6px 0",boxShadow:"0 8px 32px #00000088"}}>
+                    {[["recetas","🧪 Recetas"],["insumos","📦 Insumos"],["productos","🏷️ Productos"],["ventas","💰 Ventas"],["proveedores","🤝 Proveedores"],["finanzas","📊 Finanzas"]].map(([id,label])=>(
+                      <button key={id}
+                        onClick={()=>{setTab(id);setShowNegocioMenu(false);}}
+                        style={{display:"block",width:"100%",textAlign:"left",background:tab===id?"#4b7d0b18":"none",border:"none",padding:"9px 18px",fontSize:12,fontWeight:600,color:tab===id?"#4b7d0b":"#666",cursor:"pointer",fontFamily:"Montserrat,sans-serif",letterSpacing:".06em",transition:"background .15s"}}
+                        onMouseEnter={e=>e.target.style.background=tab===id?"#4b7d0b22":"#1a1a1a"}
+                        onMouseLeave={e=>e.target.style.background=tab===id?"#4b7d0b18":"none"}
+                      >{label}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -275,6 +359,12 @@ export default function App() {
           {tab==="historial"  && <Historial movimientos={movimientos}/>}
           {tab==="ajuste"    && <AjusteStock filamentos={filamentos} maestros={maestros} onAjuste={handleAjuste} onDelete={key=>saveFil(filamentos.filter(f=>f.key!==key))}/>}
           {tab==="calculadora" && <Calculadora filamentos={filamentos}/>}
+          {tab==="recetas"     && <Recetas recetas={recetas} onSave={saveRecetas} toast={toast_}/>}
+          {tab==="insumos"     && <Insumos insumos={insumos} onSave={saveInsumos} toast={toast_}/>}
+          {tab==="productos"   && <Productos productos={productos} recetas={recetas} onSave={saveProductos} toast={toast_}/>}
+          {tab==="ventas"      && <Ventas ventas={ventas} productos={productos} onSave={handleVenta} onUpdate={v=>saveVentas_(v)} toast={toast_}/>}
+          {tab==="proveedores" && <Proveedores proveedores={proveedores} insumos={insumos} onSave={saveProveedores} toast={toast_}/>}
+          {tab==="finanzas"    && <Finanzas ventas={ventas} productos={productos} insumos={insumos}/>}
           {tab==="maestros"   && <Maestros maestros={maestros} filamentos={filamentos}
             onAdd={(l,v)=>{ if(l==="bobinas_update"){saveMaes({...maestros,bobinas:v});}else{const updated=[...maestros[l],v].sort((a,b)=>typeof a==="string"?a.localeCompare(b):0);saveMaes({...maestros,[l]:updated});}}}
             onDelete={(l,v)=>saveMaes({...maestros,[l]:maestros[l].filter(x=>x!==v)})}
@@ -1448,6 +1538,830 @@ function Maestros({ maestros, filamentos, onAdd, onDelete, onRename, onPrecioUpd
             setNewBobina({marca:"",pesoBobina:""});
           }}>+ Agregar</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── RECETAS ───────────────────────────────────────────────────────────────────
+function Recetas({ recetas, onSave, toast }) {
+  const [modal, setModal] = useState(null); // null | 'new' | receta
+  const [ver, setVer]     = useState(null); // receta para ver detalle
+  const [cantidades, setCantidades] = useState({}); // {id: cantidad}
+
+  const setCant = (id, v) => setCantidades(c=>({...c,[id]:v}));
+
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+        <div className="section-title" style={{marginBottom:0}}>Recetas de productos</div>
+        <button className="btn" onClick={()=>setModal({})}>+ Nueva receta</button>
+      </div>
+
+      {recetas.length===0
+        ? <div className="card" style={{textAlign:"center",padding:40,color:"#333"}}>No hay recetas todavía. Creá la primera.</div>
+        : <div className="grid-3" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16}}>
+            {recetas.map(r=>{
+              const mult = Number(cantidades[r.id])||1;
+              return (
+                <div key={r.id} className="card" style={{display:"flex",flexDirection:"column",gap:12}}>
+                  {r.foto
+                    ? <img src={r.foto} alt={r.nombre} style={{width:"100%",height:160,objectFit:"cover",borderRadius:8,border:"1px solid #252525"}}/>
+                    : <div style={{width:"100%",height:120,background:"#1a1a1a",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",color:"#333",fontSize:12}}>Sin foto</div>
+                  }
+                  <div>
+                    <div style={{fontSize:15,fontWeight:700,color:"#e0e0e0"}}>{r.nombre}</div>
+                    {r.categoria && <div style={{fontSize:11,color:"#555",marginTop:2}}>{r.categoria}</div>}
+                  </div>
+                  {r.precioSugerido && <div style={{fontSize:14,color:"#4b7d0b",fontWeight:700}}>{fmtARS(r.precioSugerido)}</div>}
+
+                  {/* Cantidad multiplier */}
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <div className="lbl" style={{marginBottom:0}}>Cantidad:</div>
+                    <input className="inp" type="number" min={1} value={cantidades[r.id]||1} onChange={e=>setCant(r.id,e.target.value)} style={{width:70,padding:"5px 10px",fontSize:13}}/>
+                    <div style={{fontSize:10,color:"#555"}}>unidades</div>
+                  </div>
+
+                  {/* Filamentos */}
+                  {r.filamentos?.length>0 && (
+                    <div>
+                      <div style={{fontSize:10,color:"#555",letterSpacing:".08em",textTransform:"uppercase",marginBottom:6,fontWeight:600}}>Filamento</div>
+                      {r.filamentos.map((f,i)=>(
+                        <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}>
+                          <span style={{color:"#aaa"}}>{f.color} {f.material}</span>
+                          <span style={{color:"#4b7d0b",fontWeight:600}}>{fmtG(Number(f.gramos)*mult)}g</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Insumos */}
+                  {r.insumos?.length>0 && (
+                    <div>
+                      <div style={{fontSize:10,color:"#555",letterSpacing:".08em",textTransform:"uppercase",marginBottom:6,fontWeight:600}}>Insumos extra</div>
+                      {r.insumos.map((ins,i)=>(
+                        <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}>
+                          <span style={{color:"#aaa"}}>{ins.nombre}</span>
+                          <span style={{color:"#888"}}>{fmtG(Number(ins.cantidad)*mult)} {ins.unidad}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Embalaje */}
+                  {r.embalaje?.length>0 && (
+                    <div>
+                      <div style={{fontSize:10,color:"#555",letterSpacing:".08em",textTransform:"uppercase",marginBottom:6,fontWeight:600}}>Embalaje</div>
+                      {r.embalaje.map((e,i)=>(
+                        <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}>
+                          <span style={{color:"#aaa"}}>{e.nombre}</span>
+                          <span style={{color:"#888"}}>{fmtG(Number(e.cantidad)*mult)} {e.unidad}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Tiempo */}
+                  {r.tiempo && <div style={{fontSize:11,color:"#555"}}>⏱ {r.tiempo} min{mult>1?` × ${mult} = ${Number(r.tiempo)*mult} min`:""}</div>}
+
+                  {/* Notas */}
+                  {r.notas && <div style={{fontSize:11,color:"#444",fontStyle:"italic",borderTop:"1px solid #1a1a1a",paddingTop:8}}>{r.notas}</div>}
+
+                  <div style={{display:"flex",gap:8,marginTop:4}}>
+                    <button className="btn-ghost" style={{flex:1}} onClick={()=>setModal(r)}>✎ Editar</button>
+                    <button className="btn-danger" onClick={()=>{if(window.confirm(`¿Eliminás "${r.nombre}"?`))onSave(recetas.filter(x=>x.id!==r.id));}}>×</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+      }
+
+      {modal!==null && (
+        <RecetaModal
+          receta={modal}
+          onSave={r=>{
+            if(r.id) onSave(recetas.map(x=>x.id===r.id?r:x));
+            else onSave([...recetas,{...r,id:uid()}]);
+            setModal(null); toast("✓ Receta guardada");
+          }}
+          onClose={()=>setModal(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function RecetaModal({ receta, onSave, onClose }) {
+  const [form, setForm] = useState({
+    nombre:"", categoria:"", precioSugerido:"", tiempo:"", notas:"", foto:"",
+    filamentos:[{color:"",material:"PLA",gramos:""}],
+    insumos:[],
+    embalaje:[],
+    ...receta
+  });
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const setFil   = (i,k,v) => setForm(f=>({...f,filamentos:f.filamentos.map((x,idx)=>idx===i?{...x,[k]:v}:x)}));
+  const addFil   = () => setForm(f=>({...f,filamentos:[...f.filamentos,{color:"",material:"PLA",gramos:""}]}));
+  const remFil   = i => setForm(f=>({...f,filamentos:f.filamentos.filter((_,idx)=>idx!==i)}));
+
+  const setIns   = (arr,k) => (i,fk,v) => setForm(f=>({...f,[k]:f[k].map((x,idx)=>idx===i?{...x,[fk]:v}:x)}));
+  const addIns   = k => setForm(f=>({...f,[k]:[...f[k],{nombre:"",cantidad:"1",unidad:"u"}]}));
+  const remIns   = (k,i) => setForm(f=>({...f,[k]:f[k].filter((_,idx)=>idx!==i)}));
+
+  const handleFoto = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => set("foto", ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const submit = () => {
+    if (!form.nombre.trim()) return alert("El nombre es obligatorio.");
+    onSave(form);
+  };
+
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:15,fontWeight:700,color:"#fff",marginBottom:20}}>{form.id?"Editar receta":"Nueva receta"}</div>
+
+        <div className="grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+          <div style={{gridColumn:"1/-1"}}><div className="lbl">Nombre *</div><input className="inp" value={form.nombre} onChange={e=>set("nombre",e.target.value)}/></div>
+          <div><div className="lbl">Categoría</div><input className="inp" placeholder="Ej: Veladores" value={form.categoria} onChange={e=>set("categoria",e.target.value)}/></div>
+          <div><div className="lbl">Precio sugerido (ARS)</div><input className="inp" type="number" value={form.precioSugerido} onChange={e=>set("precioSugerido",e.target.value)}/></div>
+          <div><div className="lbl">Tiempo de impresión (min)</div><input className="inp" type="number" value={form.tiempo} onChange={e=>set("tiempo",e.target.value)}/></div>
+          <div>
+            <div className="lbl">Foto del producto</div>
+            <input type="file" accept="image/*" onChange={handleFoto} style={{fontSize:11,color:"#666"}}/>
+            {form.foto && <img src={form.foto} alt="" style={{width:"100%",height:80,objectFit:"cover",borderRadius:6,marginTop:6}}/>}
+          </div>
+        </div>
+
+        {/* Filamentos */}
+        <div style={{marginBottom:14}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div style={{fontSize:11,color:"#aaa",fontWeight:700,textTransform:"uppercase",letterSpacing:".06em"}}>Filamentos</div>
+            <button className="btn-ghost" onClick={addFil}>+ Agregar</button>
+          </div>
+          {form.filamentos.map((f,i)=>(
+            <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 1fr 80px 28px",gap:8,marginBottom:8,alignItems:"flex-end"}}>
+              <div><div className="lbl">Color</div><input className="inp" style={{padding:"8px 10px",fontSize:12}} placeholder="Ej: Negro" value={f.color} onChange={e=>setFil(i,"color",e.target.value)}/></div>
+              <div><div className="lbl">Material</div><input className="inp" style={{padding:"8px 10px",fontSize:12}} placeholder="PLA" value={f.material} onChange={e=>setFil(i,"material",e.target.value)}/></div>
+              <div><div className="lbl">Gramos</div><input className="inp" type="number" style={{padding:"8px 10px",fontSize:12}} value={f.gramos} onChange={e=>setFil(i,"gramos",e.target.value)}/></div>
+              {form.filamentos.length>1 && <button className="btn-icon" onClick={()=>remFil(i)} style={{marginBottom:2}}>×</button>}
+            </div>
+          ))}
+        </div>
+
+        {/* Insumos */}
+        {[["insumos","Insumos extra"],["embalaje","Embalaje"]].map(([k,label])=>(
+          <div key={k} style={{marginBottom:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <div style={{fontSize:11,color:"#aaa",fontWeight:700,textTransform:"uppercase",letterSpacing:".06em"}}>{label}</div>
+              <button className="btn-ghost" onClick={()=>addIns(k)}>+ Agregar</button>
+            </div>
+            {(form[k]||[]).map((ins,i)=>(
+              <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 80px 70px 28px",gap:8,marginBottom:8,alignItems:"flex-end"}}>
+                <div><div className="lbl">Nombre</div><input className="inp" style={{padding:"8px 10px",fontSize:12}} placeholder="Ej: Spray" value={ins.nombre} onChange={e=>setIns(form[k],k)(i,"nombre",e.target.value)}/></div>
+                <div><div className="lbl">Cantidad</div><input className="inp" type="number" style={{padding:"8px 10px",fontSize:12}} value={ins.cantidad} onChange={e=>setIns(form[k],k)(i,"cantidad",e.target.value)}/></div>
+                <div><div className="lbl">Unidad</div><input className="inp" style={{padding:"8px 10px",fontSize:12}} placeholder="u/ml/g" value={ins.unidad} onChange={e=>setIns(form[k],k)(i,"unidad",e.target.value)}/></div>
+                <button className="btn-icon" onClick={()=>remIns(k,i)} style={{marginBottom:2}}>×</button>
+              </div>
+            ))}
+          </div>
+        ))}
+
+        <div style={{marginBottom:14}}><div className="lbl">Notas de armado</div><textarea className="inp" value={form.notas} onChange={e=>set("notas",e.target.value)} placeholder="Pasos, tips, advertencias..."/></div>
+
+        <div style={{display:"flex",gap:8,marginTop:8}}>
+          <button className="btn" style={{flex:1}} onClick={submit}>Guardar</button>
+          <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── INSUMOS ───────────────────────────────────────────────────────────────────
+function Insumos({ insumos, onSave, toast }) {
+  const [modal, setModal] = useState(null);
+  const [movModal, setMovModal] = useState(null);
+  const CATEGORIAS = ["Adhesión","Embalaje","Limpieza","Electricidad","Herramientas","Otros"];
+
+  const registrarMov = (id, tipo, cantidad, nota) => {
+    const nuevos = insumos.map(ins => {
+      if (ins.id !== id) return ins;
+      const nuevo = tipo==="entrada"
+        ? (Number(ins.stock)||0) + Number(cantidad)
+        : Math.max(0,(Number(ins.stock)||0) - Number(cantidad));
+      return {...ins, stock:nuevo, movimientos:[...(ins.movimientos||[]),{tipo,cantidad:Number(cantidad),nota,fecha:new Date().toISOString()}]};
+    });
+    onSave(nuevos);
+    toast(`✓ Movimiento registrado`);
+    setMovModal(null);
+  };
+
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+        <div className="section-title" style={{marginBottom:0}}>Control de insumos</div>
+        <button className="btn" onClick={()=>setModal({})}>+ Nuevo insumo</button>
+      </div>
+
+      {CATEGORIAS.map(cat=>{
+        const items = insumos.filter(i=>i.categoria===cat);
+        if(items.length===0) return null;
+        return (
+          <div key={cat} style={{marginBottom:24}}>
+            <div style={{fontSize:11,color:"#555",letterSpacing:".1em",textTransform:"uppercase",fontWeight:700,marginBottom:10}}>{cat}</div>
+            <div className="card" style={{padding:0}}>
+              {items.map((ins,idx)=>{
+                const bajo = ins.stockMinimo && (Number(ins.stock)||0) < Number(ins.stockMinimo);
+                return (
+                  <div key={ins.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 20px",borderBottom:idx<items.length-1?"1px solid #1a1a1a":"none"}}>
+                    <div>
+                      <div style={{fontSize:13,color:"#e0e0e0",fontWeight:600}}>{ins.nombre}</div>
+                      {ins.proveedor && <div style={{fontSize:11,color:"#444",marginTop:2}}>{ins.proveedor}</div>}
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:12}}>
+                      <div style={{textAlign:"right"}}>
+                        <div style={{fontSize:14,color:bajo?"#cc4444":"#4b7d0b",fontWeight:700}}>{fmtG(Number(ins.stock)||0)} {ins.unidad}</div>
+                        {bajo && <div style={{fontSize:9,color:"#cc4444",fontWeight:700}}>⚠ STOCK BAJO</div>}
+                        {ins.precioUnitario && <div style={{fontSize:10,color:"#444",marginTop:1}}>{fmtARS(ins.precioUnitario)}/{ins.unidad}</div>}
+                      </div>
+                      <div style={{display:"flex",gap:4}}>
+                        <button className="btn-ghost" style={{fontSize:10,padding:"4px 8px"}} onClick={()=>setMovModal({...ins,movTipo:"entrada"})}>+ Entrada</button>
+                        <button className="btn-ghost" style={{fontSize:10,padding:"4px 8px"}} onClick={()=>setMovModal({...ins,movTipo:"salida"})}>- Salida</button>
+                        <button className="btn-icon" onClick={()=>setModal(ins)}>✎</button>
+                        <button className="btn-icon" onClick={()=>{if(window.confirm(`¿Eliminás "${ins.nombre}"?`))onSave(insumos.filter(x=>x.id!==ins.id));}}>×</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
+      {insumos.filter(i=>!i.categoria||!CATEGORIAS.includes(i.categoria)).length>0 && (
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:11,color:"#555",letterSpacing:".1em",textTransform:"uppercase",fontWeight:700,marginBottom:10}}>Sin categoría</div>
+          <div className="card">
+            {insumos.filter(i=>!i.categoria||!CATEGORIAS.includes(i.categoria)).map(ins=>(
+              <div key={ins.id} className="row-item">
+                <span style={{fontSize:13,color:"#ccc"}}>{ins.nombre}</span>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <span style={{fontSize:13,color:"#4b7d0b",fontWeight:700}}>{fmtG(Number(ins.stock)||0)} {ins.unidad}</span>
+                  <button className="btn-icon" onClick={()=>setModal(ins)}>✎</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {insumos.length===0 && <div className="card" style={{textAlign:"center",padding:40,color:"#333"}}>No hay insumos cargados.</div>}
+
+      {modal!==null && (
+        <InsumoModal
+          insumo={modal}
+          onSave={ins=>{
+            if(ins.id) onSave(insumos.map(x=>x.id===ins.id?ins:x));
+            else onSave([...insumos,{...ins,id:uid(),stock:ins.stockInicial||0,movimientos:[]}]);
+            setModal(null); toast("✓ Insumo guardado");
+          }}
+          onClose={()=>setModal(null)}
+        />
+      )}
+
+      {movModal && (
+        <MovModal
+          item={movModal}
+          onSave={(cant,nota)=>registrarMov(movModal.id,movModal.movTipo,cant,nota)}
+          onClose={()=>setMovModal(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function InsumoModal({ insumo, onSave, onClose }) {
+  const CATS = ["Adhesión","Embalaje","Limpieza","Electricidad","Herramientas","Otros"];
+  const [form, setForm] = useState({nombre:"",categoria:"",unidad:"u",stock:0,stockMinimo:"",precioUnitario:"",proveedor:"",...insumo});
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:15,fontWeight:700,color:"#fff",marginBottom:20}}>{form.id?"Editar insumo":"Nuevo insumo"}</div>
+        <div className="grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div style={{gridColumn:"1/-1"}}><div className="lbl">Nombre *</div><input className="inp" value={form.nombre} onChange={e=>set("nombre",e.target.value)}/></div>
+          <div><div className="lbl">Categoría</div><select className="inp" value={form.categoria} onChange={e=>set("categoria",e.target.value)}><option value="">—</option>{CATS.map(c=><option key={c}>{c}</option>)}</select></div>
+          <div><div className="lbl">Unidad</div><input className="inp" placeholder="u / ml / g / m" value={form.unidad} onChange={e=>set("unidad",e.target.value)}/></div>
+          {!form.id && <div><div className="lbl">Stock inicial</div><input className="inp" type="number" value={form.stockInicial||""} onChange={e=>set("stockInicial",e.target.value)}/></div>}
+          <div><div className="lbl">Stock mínimo (alerta)</div><input className="inp" type="number" value={form.stockMinimo} onChange={e=>set("stockMinimo",e.target.value)}/></div>
+          <div><div className="lbl">Precio unitario (ARS)</div><input className="inp" type="number" value={form.precioUnitario} onChange={e=>set("precioUnitario",e.target.value)}/></div>
+          <div style={{gridColumn:"1/-1"}}><div className="lbl">Proveedor</div><input className="inp" value={form.proveedor} onChange={e=>set("proveedor",e.target.value)}/></div>
+        </div>
+        <div style={{display:"flex",gap:8,marginTop:20}}>
+          <button className="btn" style={{flex:1}} onClick={()=>{if(!form.nombre.trim())return alert("Nombre requerido.");onSave(form);}}>Guardar</button>
+          <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MovModal({ item, onSave, onClose }) {
+  const [cant, setCant] = useState("");
+  const [nota, setNota] = useState("");
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" style={{maxWidth:360}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:14,fontWeight:700,color:"#fff",marginBottom:4}}>{item.movTipo==="entrada"?"+ Entrada":"- Salida"}: {item.nombre}</div>
+        <div style={{fontSize:12,color:"#555",marginBottom:20}}>Stock actual: <span style={{color:"#4b7d0b",fontWeight:700}}>{fmtG(Number(item.stock)||0)} {item.unidad}</span></div>
+        <div style={{marginBottom:12}}><div className="lbl">Cantidad ({item.unidad})</div><input className="inp" type="number" min={0} autoFocus value={cant} onChange={e=>setCant(e.target.value)}/></div>
+        <div style={{marginBottom:16}}><div className="lbl">Nota (opcional)</div><input className="inp" value={nota} onChange={e=>setNota(e.target.value)} placeholder="Ej: Compra en ferretería"/></div>
+        <div style={{display:"flex",gap:8}}>
+          <button className="btn" style={{flex:1}} onClick={()=>{if(!cant)return;onSave(cant,nota);}}>Confirmar</button>
+          <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PRODUCTOS TERMINADOS ──────────────────────────────────────────────────────
+function Productos({ productos, recetas, onSave, toast }) {
+  const [modal, setModal] = useState(null);
+
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+        <div className="section-title" style={{marginBottom:0}}>Stock de productos terminados</div>
+        <button className="btn" onClick={()=>setModal({})}>+ Nuevo producto</button>
+      </div>
+
+      {productos.length===0
+        ? <div className="card" style={{textAlign:"center",padding:40,color:"#333"}}>No hay productos cargados.</div>
+        : <div className="grid-4" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
+            {productos.map(p=>{
+              const bajo = p.stockMinimo && (Number(p.stock)||0) < Number(p.stockMinimo);
+              const receta = recetas.find(r=>r.id===p.recetaId);
+              return (
+                <div key={p.id} className="card">
+                  {p.foto
+                    ? <img src={p.foto} alt={p.nombre} style={{width:"100%",height:120,objectFit:"cover",borderRadius:8,marginBottom:10,border:"1px solid #252525"}}/>
+                    : <div style={{width:"100%",height:80,background:"#1a1a1a",borderRadius:8,marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center",color:"#333",fontSize:11}}>Sin foto</div>
+                  }
+                  <div style={{fontSize:14,color:"#e0e0e0",fontWeight:700,marginBottom:4}}>{p.nombre}</div>
+                  {p.variante && <div className="tag-chip" style={{marginBottom:8,display:"inline-block"}}>{p.variante}</div>}
+                  {receta && <div style={{fontSize:10,color:"#555",marginBottom:8}}>Receta: {receta.nombre}</div>}
+                  <div style={{fontSize:20,color:bajo?"#cc4444":"#4b7d0b",fontWeight:800,marginBottom:4}}>{Number(p.stock)||0} <span style={{fontSize:11,fontWeight:400}}>u</span></div>
+                  {bajo && <div style={{fontSize:9,color:"#cc4444",fontWeight:700,marginBottom:4}}>⚠ STOCK BAJO</div>}
+                  {p.precioVenta && <div style={{fontSize:12,color:"#888",marginBottom:8}}>{fmtARS(p.precioVenta)}</div>}
+                  <div style={{display:"flex",gap:6,marginTop:8}}>
+                    <button className="btn-ghost" style={{flex:1,fontSize:10,padding:"5px 8px"}} onClick={()=>{const n=prompt("Nuevo stock:");if(n!==null)onSave(productos.map(x=>x.id===p.id?{...x,stock:Number(n)}:x));}}>Ajustar stock</button>
+                    <button className="btn-icon" onClick={()=>setModal(p)}>✎</button>
+                    <button className="btn-icon" onClick={()=>{if(window.confirm(`¿Eliminás "${p.nombre}"?`))onSave(productos.filter(x=>x.id!==p.id));}}>×</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+      }
+
+      {modal!==null && (
+        <ProductoModal
+          producto={modal}
+          recetas={recetas}
+          onSave={p=>{
+            if(p.id) onSave(productos.map(x=>x.id===p.id?p:x));
+            else onSave([...productos,{...p,id:uid(),stock:p.stockInicial||0}]);
+            setModal(null); toast("✓ Producto guardado");
+          }}
+          onClose={()=>setModal(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ProductoModal({ producto, recetas, onSave, onClose }) {
+  const [form, setForm] = useState({nombre:"",variante:"",recetaId:"",precioVenta:"",stockMinimo:"",foto:"",...producto});
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  const handleFoto = e => { const file=e.target.files[0]; if(!file)return; const r=new FileReader(); r.onload=ev=>set("foto",ev.target.result); r.readAsDataURL(file); };
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:15,fontWeight:700,color:"#fff",marginBottom:20}}>{form.id?"Editar producto":"Nuevo producto terminado"}</div>
+        <div className="grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div style={{gridColumn:"1/-1"}}><div className="lbl">Nombre *</div><input className="inp" value={form.nombre} onChange={e=>set("nombre",e.target.value)}/></div>
+          <div><div className="lbl">Variante</div><input className="inp" placeholder="Ej: Negro 20cm" value={form.variante} onChange={e=>set("variante",e.target.value)}/></div>
+          <div><div className="lbl">Receta asociada</div><select className="inp" value={form.recetaId} onChange={e=>set("recetaId",e.target.value)}><option value="">— Ninguna —</option>{recetas.map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}</select></div>
+          <div><div className="lbl">Precio de venta (ARS)</div><input className="inp" type="number" value={form.precioVenta} onChange={e=>set("precioVenta",e.target.value)}/></div>
+          <div><div className="lbl">Stock mínimo (alerta)</div><input className="inp" type="number" value={form.stockMinimo} onChange={e=>set("stockMinimo",e.target.value)}/></div>
+          {!form.id && <div><div className="lbl">Stock inicial</div><input className="inp" type="number" value={form.stockInicial||""} onChange={e=>set("stockInicial",e.target.value)}/></div>}
+          <div style={{gridColumn:"1/-1"}}><div className="lbl">Foto</div><input type="file" accept="image/*" onChange={handleFoto} style={{fontSize:11,color:"#666"}}/>{form.foto&&<img src={form.foto} alt="" style={{width:"100%",height:80,objectFit:"cover",borderRadius:6,marginTop:6}}/>}</div>
+        </div>
+        <div style={{display:"flex",gap:8,marginTop:20}}>
+          <button className="btn" style={{flex:1}} onClick={()=>{if(!form.nombre.trim())return alert("Nombre requerido.");onSave(form);}}>Guardar</button>
+          <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── VENTAS ────────────────────────────────────────────────────────────────────
+function Ventas({ ventas, productos, onSave, onUpdate, toast }) {
+  const [modal, setModal] = useState(false);
+  const [filtroEstado, setFiltroEstado] = useState("");
+  const [filtroCanal, setFiltroCanal]   = useState("");
+
+  const sorted = [...ventas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  const filtradas = sorted.filter(v=>
+    (!filtroEstado||v.estado===filtroEstado)&&
+    (!filtroCanal||v.canal===filtroCanal)
+  );
+
+  const totalMes = () => {
+    const m = new Date().toISOString().slice(0,7);
+    return ventas.filter(v=>v.fecha?.startsWith(m)&&v.estado!=="Cancelado").reduce((a,v)=>a+Number(v.precioTotal||0),0);
+  };
+
+  const updateEstado = (id, estado) => {
+    onUpdate(ventas.map(v=>v.id===id?{...v,estado}:v));
+    toast(`✓ Estado actualizado a ${estado}`);
+  };
+
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <div className="section-title" style={{marginBottom:0}}>Ventas</div>
+        <button className="btn" onClick={()=>setModal(true)}>+ Nueva venta</button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid-4" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:20}}>
+        {[
+          {label:"Este mes",val:fmtARS(totalMes()),sub:"en ventas"},
+          {label:"Total ventas",val:ventas.filter(v=>v.estado!=="Cancelado").length,sub:"confirmadas"},
+          {label:"Pendientes",val:ventas.filter(v=>v.estado==="Pendiente"||v.estado==="En producción").length,sub:"por entregar"},
+          {label:"Canceladas",val:ventas.filter(v=>v.estado==="Cancelado").length,sub:"este período"},
+        ].map((s,i)=>(
+          <div key={i} className="card" style={{padding:16}}>
+            <div style={{fontSize:22,fontWeight:800,color:"#4b7d0b",letterSpacing:"-0.02em"}}>{s.val}</div>
+            <div style={{fontSize:10,color:"#555",textTransform:"uppercase",letterSpacing:".08em",fontWeight:600,marginTop:6}}>{s.label}</div>
+            <div style={{fontSize:10,color:"#333",marginTop:2}}>{s.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+        <select className="inp" style={{width:"auto",padding:"7px 12px",fontSize:12}} value={filtroEstado} onChange={e=>setFiltroEstado(e.target.value)}>
+          <option value="">Todos los estados</option>
+          {ESTADOS.map(s=><option key={s}>{s}</option>)}
+        </select>
+        <select className="inp" style={{width:"auto",padding:"7px 12px",fontSize:12}} value={filtroCanal} onChange={e=>setFiltroCanal(e.target.value)}>
+          <option value="">Todos los canales</option>
+          {CANALES.map(c=><option key={c}>{c}</option>)}
+        </select>
+        {(filtroEstado||filtroCanal)&&<button className="btn-ghost" onClick={()=>{setFiltroEstado("");setFiltroCanal("");}}>Limpiar</button>}
+      </div>
+
+      {filtradas.length===0
+        ? <div className="card" style={{textAlign:"center",padding:40,color:"#333"}}>No hay ventas{filtroEstado||filtroCanal?" con estos filtros":""}.</div>
+        : <div className="card" style={{padding:0}}>
+            {filtradas.map((v,idx)=>{
+              const prod = productos.find(p=>p.id===v.productoId);
+              const ec = ESTADO_COLOR[v.estado]||"#555";
+              return (
+                <div key={v.id} style={{padding:"14px 20px",borderBottom:idx<filtradas.length-1?"1px solid #1a1a1a":"none"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
+                    <div>
+                      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:4}}>
+                        <span style={{fontSize:13,color:"#e0e0e0",fontWeight:600}}>{v.clienteNombre||"Cliente sin nombre"}</span>
+                        <span className="badge" style={{background:`${ec}20`,color:ec,border:`1px solid ${ec}44`}}>{v.estado}</span>
+                        <span className="tag-chip">{v.canal}</span>
+                      </div>
+                      <div style={{fontSize:12,color:"#888"}}>
+                        {prod?.nombre||v.productoNombre||"—"} {v.variante&&`· ${v.variante}`} × {v.cantidad}
+                      </div>
+                      {v.clienteContacto && <div style={{fontSize:11,color:"#444",marginTop:2}}>{v.clienteContacto}</div>}
+                      {v.notas && <div style={{fontSize:11,color:"#444",fontStyle:"italic",marginTop:2}}>{v.notas}</div>}
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:16,color:"#4b7d0b",fontWeight:800}}>{fmtARS(v.precioTotal||0)}</div>
+                      {v.costoEnvio>0 && <div style={{fontSize:10,color:"#555"}}>Envío: {fmtARS(v.costoEnvio)}</div>}
+                      <div style={{fontSize:10,color:"#444",marginTop:2}}>{v.fecha?new Date(v.fecha).toLocaleDateString("es-AR",{day:"2-digit",month:"short",year:"numeric"}):""}</div>
+                      <div style={{marginTop:6}}>
+                        <select style={{background:"#1a1a1a",border:"1px solid #252525",borderRadius:6,padding:"3px 8px",fontSize:11,color:ec,cursor:"pointer",fontFamily:"Montserrat,sans-serif",fontWeight:600}} value={v.estado} onChange={e=>updateEstado(v.id,e.target.value)}>
+                          {ESTADOS.map(s=><option key={s} style={{color:"#e0e0e0"}}>{s}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+      }
+
+      {modal && (
+        <VentaModal
+          productos={productos}
+          onSave={v=>{onSave(v);setModal(false);}}
+          onClose={()=>setModal(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function VentaModal({ productos, onSave, onClose }) {
+  const [form, setForm] = useState({canal:"MercadoLibre",productoId:"",variante:"",cantidad:1,precioUnitario:"",costoEnvio:0,estado:"Pendiente",clienteNombre:"",clienteContacto:"",notas:""});
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  const prod = productos.find(p=>p.id===form.productoId);
+  const precioTotal = (Number(form.precioUnitario)||0)*Number(form.cantidad) + Number(form.costoEnvio||0);
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:15,fontWeight:700,color:"#fff",marginBottom:20}}>Nueva venta</div>
+        <div className="grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div><div className="lbl">Canal</div><select className="inp" value={form.canal} onChange={e=>set("canal",e.target.value)}>{CANALES.map(c=><option key={c}>{c}</option>)}</select></div>
+          <div><div className="lbl">Estado</div><select className="inp" value={form.estado} onChange={e=>set("estado",e.target.value)}>{ESTADOS.map(s=><option key={s}>{s}</option>)}</select></div>
+          <div style={{gridColumn:"1/-1"}}><div className="lbl">Producto</div><select className="inp" value={form.productoId} onChange={e=>set("productoId",e.target.value)}><option value="">— Seleccioná —</option>{productos.map(p=><option key={p.id} value={p.id}>{p.nombre}{p.variante?` · ${p.variante}`:""}</option>)}</select></div>
+          {prod&&<div style={{gridColumn:"1/-1",background:"#0d0d0d",borderRadius:8,padding:"8px 12px",fontSize:11,color:"#555",border:"1px solid #1e1e1e"}}>Stock disponible: <span style={{color:"#4b7d0b",fontWeight:700}}>{prod.stock||0} u</span></div>}
+          <div><div className="lbl">Cantidad</div><input className="inp" type="number" min={1} value={form.cantidad} onChange={e=>set("cantidad",e.target.value)}/></div>
+          <div><div className="lbl">Precio unitario (ARS)</div><input className="inp" type="number" value={form.precioUnitario} onChange={e=>set("precioUnitario",e.target.value)}/></div>
+          <div><div className="lbl">Costo de envío (ARS)</div><input className="inp" type="number" value={form.costoEnvio} onChange={e=>set("costoEnvio",e.target.value)}/></div>
+          <div style={{display:"flex",alignItems:"flex-end"}}><div style={{padding:"10px 14px",background:"#0d0d0d",borderRadius:8,border:"1px solid #1e1e1e",fontSize:12,color:"#4b7d0b",fontWeight:700,width:"100%"}}>Total: {fmtARS(precioTotal)}</div></div>
+          <div><div className="lbl">Nombre del cliente</div><input className="inp" value={form.clienteNombre} onChange={e=>set("clienteNombre",e.target.value)}/></div>
+          <div><div className="lbl">Contacto (tel / IG / ML)</div><input className="inp" value={form.clienteContacto} onChange={e=>set("clienteContacto",e.target.value)}/></div>
+          <div style={{gridColumn:"1/-1"}}><div className="lbl">Notas</div><input className="inp" value={form.notas} onChange={e=>set("notas",e.target.value)} placeholder="Personalización, dirección, etc."/></div>
+        </div>
+        <div style={{display:"flex",gap:8,marginTop:20}}>
+          <button className="btn" style={{flex:1}} onClick={()=>{if(!form.productoId&&!form.precioUnitario)return alert("Completá los campos requeridos.");onSave({...form,precioTotal,productoNombre:prod?.nombre||""});}}>Registrar venta</button>
+          <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PROVEEDORES ───────────────────────────────────────────────────────────────
+function Proveedores({ proveedores, insumos, onSave, toast }) {
+  const [modal, setModal]     = useState(null);
+  const [pedidoModal, setPedidoModal] = useState(null);
+
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+        <div className="section-title" style={{marginBottom:0}}>Proveedores</div>
+        <button className="btn" onClick={()=>setModal({})}>+ Nuevo proveedor</button>
+      </div>
+
+      {proveedores.length===0
+        ? <div className="card" style={{textAlign:"center",padding:40,color:"#333"}}>No hay proveedores cargados.</div>
+        : <div className="grid-2" style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:16}}>
+            {proveedores.map(p=>(
+              <div key={p.id} className="card">
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+                  <div>
+                    <div style={{fontSize:15,fontWeight:700,color:"#e0e0e0"}}>{p.nombre}</div>
+                    {p.tipo && <span className="tag-chip" style={{marginTop:4,display:"inline-block"}}>{p.tipo}</span>}
+                  </div>
+                  <div style={{display:"flex",gap:4}}>
+                    <button className="btn-icon" onClick={()=>setModal(p)}>✎</button>
+                    <button className="btn-icon" onClick={()=>{if(window.confirm(`¿Eliminás "${p.nombre}"?`))onSave(proveedores.filter(x=>x.id!==p.id));}}>×</button>
+                  </div>
+                </div>
+                {p.contacto && <div style={{fontSize:12,color:"#555",marginBottom:4}}>📞 {p.contacto}</div>}
+                {p.web && <div style={{fontSize:12,color:"#4b7d0b",marginBottom:4}}><a href={p.web} target="_blank" rel="noreferrer" style={{color:"#4b7d0b"}}>🌐 {p.web}</a></div>}
+                {p.productos && <div style={{fontSize:12,color:"#444",marginBottom:8}}>Productos: {p.productos}</div>}
+                {p.notas && <div style={{fontSize:11,color:"#444",fontStyle:"italic",borderTop:"1px solid #1a1a1a",paddingTop:8,marginTop:4}}>{p.notas}</div>}
+
+                {/* Pedidos pendientes */}
+                {(p.pedidos||[]).filter(pd=>pd.estado!=="Recibido").length>0 && (
+                  <div style={{marginTop:10,borderTop:"1px solid #1a1a1a",paddingTop:10}}>
+                    <div style={{fontSize:10,color:"#555",letterSpacing:".08em",textTransform:"uppercase",fontWeight:600,marginBottom:6}}>Pedidos pendientes</div>
+                    {p.pedidos.filter(pd=>pd.estado!=="Recibido").map((pd,i)=>(
+                      <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:11,padding:"4px 0",borderBottom:"1px solid #1a1a1a"}}>
+                        <span style={{color:"#aaa"}}>{pd.descripcion}</span>
+                        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                          <span className="badge" style={{background:"#a0700020",color:"#a07000",border:"1px solid #a0700040"}}>{pd.estado}</span>
+                          <button style={{background:"none",border:"none",cursor:"pointer",color:"#4b7d0b",fontSize:10,fontFamily:"Montserrat,sans-serif",fontWeight:600}} onClick={()=>onSave(proveedores.map(pr=>pr.id===p.id?{...pr,pedidos:pr.pedidos.map((x,j)=>j===i?{...x,estado:"Recibido"}:x)}:pr))}>✓ Recibido</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <button className="btn-ghost" style={{marginTop:10,width:"100%",fontSize:11}} onClick={()=>setPedidoModal(p)}>+ Nuevo pedido</button>
+              </div>
+            ))}
+          </div>
+      }
+
+      {modal!==null && (
+        <ProveedorModal
+          proveedor={modal}
+          onSave={pr=>{
+            if(pr.id) onSave(proveedores.map(x=>x.id===pr.id?pr:x));
+            else onSave([...proveedores,{...pr,id:uid(),pedidos:[]}]);
+            setModal(null); toast("✓ Proveedor guardado");
+          }}
+          onClose={()=>setModal(null)}
+        />
+      )}
+
+      {pedidoModal && (
+        <PedidoModal
+          proveedor={pedidoModal}
+          onSave={(desc,monto)=>{
+            onSave(proveedores.map(p=>p.id===pedidoModal.id?{...p,pedidos:[...(p.pedidos||[]),{descripcion:desc,monto,estado:"Pendiente",fecha:new Date().toISOString()}]}:p));
+            setPedidoModal(null); toast("✓ Pedido registrado");
+          }}
+          onClose={()=>setPedidoModal(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ProveedorModal({ proveedor, onSave, onClose }) {
+  const TIPOS = ["Filamento","Embalaje","Electricidad","Herramientas","General"];
+  const [form, setForm] = useState({nombre:"",tipo:"",contacto:"",web:"",productos:"",notas:"",...proveedor});
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:15,fontWeight:700,color:"#fff",marginBottom:20}}>{form.id?"Editar proveedor":"Nuevo proveedor"}</div>
+        <div className="grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div style={{gridColumn:"1/-1"}}><div className="lbl">Nombre *</div><input className="inp" value={form.nombre} onChange={e=>set("nombre",e.target.value)}/></div>
+          <div><div className="lbl">Tipo</div><select className="inp" value={form.tipo} onChange={e=>set("tipo",e.target.value)}><option value="">—</option>{TIPOS.map(t=><option key={t}>{t}</option>)}</select></div>
+          <div><div className="lbl">Contacto</div><input className="inp" placeholder="Tel / email / IG" value={form.contacto} onChange={e=>set("contacto",e.target.value)}/></div>
+          <div style={{gridColumn:"1/-1"}}><div className="lbl">Sitio web / tienda</div><input className="inp" value={form.web} onChange={e=>set("web",e.target.value)}/></div>
+          <div style={{gridColumn:"1/-1"}}><div className="lbl">Productos que vende</div><input className="inp" placeholder="Ej: PLA, PETG, filamentos especiales" value={form.productos} onChange={e=>set("productos",e.target.value)}/></div>
+          <div style={{gridColumn:"1/-1"}}><div className="lbl">Notas</div><textarea className="inp" value={form.notas} onChange={e=>set("notas",e.target.value)} placeholder="Condiciones, descuentos, plazos..."/></div>
+        </div>
+        <div style={{display:"flex",gap:8,marginTop:20}}>
+          <button className="btn" style={{flex:1}} onClick={()=>{if(!form.nombre.trim())return alert("Nombre requerido.");onSave(form);}}>Guardar</button>
+          <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PedidoModal({ proveedor, onSave, onClose }) {
+  const [desc, setDesc] = useState("");
+  const [monto, setMonto] = useState("");
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" style={{maxWidth:380}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:14,fontWeight:700,color:"#fff",marginBottom:4}}>Nuevo pedido a {proveedor.nombre}</div>
+        <div style={{fontSize:12,color:"#555",marginBottom:20}}>Se registra como pendiente hasta que lo marcás como recibido.</div>
+        <div style={{marginBottom:12}}><div className="lbl">Descripción del pedido</div><input className="inp" autoFocus value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Ej: 3 rollos PLA negro 1kg"/></div>
+        <div style={{marginBottom:16}}><div className="lbl">Monto estimado (ARS)</div><input className="inp" type="number" value={monto} onChange={e=>setMonto(e.target.value)}/></div>
+        <div style={{display:"flex",gap:8}}>
+          <button className="btn" style={{flex:1}} onClick={()=>{if(!desc.trim())return;onSave(desc,monto);}}>Registrar pedido</button>
+          <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── FINANZAS ──────────────────────────────────────────────────────────────────
+function Finanzas({ ventas, productos, insumos }) {
+  const [periodo, setPeriodo] = useState("mes");
+
+  const filtrar = vs => {
+    const now = new Date();
+    return vs.filter(v => {
+      if(!v.fecha||v.estado==="Cancelado") return false;
+      const d = new Date(v.fecha);
+      if(periodo==="mes") return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
+      if(periodo==="3m") return (now-d)<90*24*60*60*1000;
+      if(periodo==="año") return d.getFullYear()===now.getFullYear();
+      return true;
+    });
+  };
+
+  const ventasFiltradas = filtrar(ventas);
+  const ingresoTotal    = ventasFiltradas.reduce((a,v)=>a+Number(v.precioTotal||0),0);
+  const cantidadVentas  = ventasFiltradas.length;
+  const ticketPromedio  = cantidadVentas>0?ingresoTotal/cantidadVentas:0;
+
+  // Ventas por canal
+  const porCanal = CANALES.map(c=>({
+    canal:c,
+    total:ventasFiltradas.filter(v=>v.canal===c).reduce((a,v)=>a+Number(v.precioTotal||0),0),
+    count:ventasFiltradas.filter(v=>v.canal===c).length,
+  })).filter(c=>c.count>0).sort((a,b)=>b.total-a.total);
+
+  // Ventas por mes (últimos 6)
+  const meses = Array.from({length:6},(_,i)=>{
+    const d=new Date(); d.setMonth(d.getMonth()-5+i);
+    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+    const label=d.toLocaleString("es-AR",{month:"short"}).toUpperCase();
+    const total=ventas.filter(v=>v.fecha?.startsWith(key)&&v.estado!=="Cancelado").reduce((a,v)=>a+Number(v.precioTotal||0),0);
+    return {label,total};
+  });
+  const maxTotal = Math.max(...meses.map(m=>m.total),1);
+
+  // Valor inventario
+  const valorInventario = productos.reduce((a,p)=>a+(Number(p.stock)||0)*(Number(p.precioVenta)||0),0);
+  const valorInsumos    = insumos.reduce((a,ins)=>a+(Number(ins.stock)||0)*(Number(ins.precioUnitario)||0),0);
+
+  // Pedidos pendientes a proveedores
+  const pedidosPendientes = [];
+
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+        <div className="section-title" style={{marginBottom:0}}>Resumen financiero</div>
+        <div style={{display:"flex",gap:6}}>
+          {[["mes","Este mes"],["3m","3 meses"],["año","Este año"],["todo","Todo"]].map(([v,l])=>(
+            <button key={v} className={periodo===v?"btn":"btn-ghost"} style={{padding:"6px 12px",fontSize:11}} onClick={()=>setPeriodo(v)}>{l}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid-4" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:20}}>
+        {[
+          {label:"Ingresos",val:fmtARS(ingresoTotal),sub:`${cantidadVentas} ventas`},
+          {label:"Ticket promedio",val:fmtARS(ticketPromedio),sub:"por venta"},
+          {label:"Inventario terminados",val:fmtARS(valorInventario),sub:"valor en stock"},
+          {label:"Inventario insumos",val:fmtARS(valorInsumos),sub:"valor estimado"},
+        ].map((s,i)=>(
+          <div key={i} className="card" style={{padding:16}}>
+            <div style={{fontSize:20,fontWeight:800,color:"#4b7d0b",letterSpacing:"-0.02em"}}>{s.val}</div>
+            <div style={{fontSize:10,color:"#555",textTransform:"uppercase",letterSpacing:".08em",fontWeight:600,marginTop:6}}>{s.label}</div>
+            <div style={{fontSize:10,color:"#333",marginTop:2}}>{s.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+        {/* Gráfico mensual */}
+        <div className="card">
+          <div style={{fontSize:10,color:"#444",letterSpacing:".1em",textTransform:"uppercase",fontWeight:600,marginBottom:18}}>Ingresos mensuales</div>
+          <div style={{display:"flex",gap:6,alignItems:"flex-end",height:80}}>
+            {meses.map((m,i)=>(
+              <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:5}}>
+                {m.total>0&&<div style={{fontSize:9,color:"#666",fontWeight:600}}>{fmtARS(m.total).replace("$","")}</div>}
+                <div style={{width:"100%",borderRadius:3,background:m.total>0?"#4b7d0b":"#1a1a1a",height:`${Math.max(m.total>0?8:3,(m.total/maxTotal)*60)}px`,transition:"height .6s"}}/>
+                <div style={{fontSize:9,color:"#444",fontWeight:600}}>{m.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Por canal */}
+        <div className="card">
+          <div style={{fontSize:10,color:"#444",letterSpacing:".1em",textTransform:"uppercase",fontWeight:600,marginBottom:16}}>Ventas por canal</div>
+          {porCanal.length===0
+            ? <div style={{color:"#333",fontSize:12}}>Sin ventas en este período.</div>
+            : porCanal.map(c=>(
+              <div key={c.canal} style={{marginBottom:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:4}}>
+                  <span style={{color:"#aaa",fontWeight:500}}>{c.canal}</span>
+                  <span style={{color:"#4b7d0b",fontWeight:600}}>{fmtARS(c.total)} <span style={{color:"#444",fontWeight:400}}>({c.count})</span></span>
+                </div>
+                <div style={{height:3,background:"#1a1a1a",borderRadius:2,overflow:"hidden"}}>
+                  <div style={{height:"100%",background:"#4b7d0b",borderRadius:2,width:`${(c.total/ingresoTotal)*100}%`}}/>
+                </div>
+              </div>
+            ))
+          }
+        </div>
+      </div>
+
+      {/* Últimas ventas */}
+      <div className="card">
+        <div style={{fontSize:10,color:"#444",letterSpacing:".1em",textTransform:"uppercase",fontWeight:600,marginBottom:14}}>Últimas ventas del período</div>
+        {ventasFiltradas.slice(0,10).map((v,i)=>(
+          <div key={v.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<Math.min(9,ventasFiltradas.length-1)?"1px solid #1a1a1a":"none"}}>
+            <div>
+              <span style={{fontSize:12,color:"#ccc",fontWeight:500}}>{v.clienteNombre||"—"}</span>
+              <span style={{fontSize:11,color:"#444",marginLeft:8}}>{v.productoNombre||"—"} × {v.cantidad}</span>
+              <span style={{fontSize:10,color:"#333",marginLeft:8}}>{v.canal}</span>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#4b7d0b"}}>{fmtARS(v.precioTotal||0)}</div>
+              <div style={{fontSize:10,color:"#333"}}>{v.fecha?new Date(v.fecha).toLocaleDateString("es-AR",{day:"2-digit",month:"short"}):""}</div>
+            </div>
+          </div>
+        ))}
+        {ventasFiltradas.length===0&&<div style={{color:"#333",fontSize:12,textAlign:"center",padding:"12px 0"}}>Sin ventas en este período.</div>}
       </div>
     </div>
   );
