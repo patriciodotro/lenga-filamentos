@@ -270,7 +270,7 @@ export default function App() {
           {tab==="compra"     && <FormCompra maestros={maestros} onSubmit={handleCompra}/>}
           {tab==="impresion"  && <FormImpresion filamentos={filamentos} onSubmit={handleImpresion}/>}
           {tab==="historial"  && <Historial movimientos={movimientos}/>}
-          {tab==="ajuste"    && <AjusteStock filamentos={filamentos} maestros={maestros} onAjuste={handleAjuste}/>}
+          {tab==="ajuste"    && <AjusteStock filamentos={filamentos} maestros={maestros} onAjuste={handleAjuste} onDelete={key=>saveFil(filamentos.filter(f=>f.key!==key))}/>}
           {tab==="calculadora" && <Calculadora filamentos={filamentos}/>}
           {tab==="maestros"   && <Maestros maestros={maestros} filamentos={filamentos}
             onAdd={(l,v)=>{ if(l==="bobinas_update"){saveMaes({...maestros,bobinas:v});}else{saveMaes({...maestros,[l]:[...maestros[l],v]});}}}
@@ -678,6 +678,9 @@ function FormImpresion({ filamentos, onSubmit }) {
           </>
         }
       </div>
+
+      {/* Stock table */}
+      <StockTabla filamentos={filamentos} onDelete={onDelete}/>
     </div>
   );
 }
@@ -750,8 +753,142 @@ function Historial({ movimientos }) {
   );
 }
 
+// ── STOCK TABLA (shared) ──────────────────────────────────────────────────────
+function StockTabla({ filamentos, onDelete }) {
+  const [sortCol,setSortCol] = useState("color");
+  const [sortDir,setSortDir] = useState("asc");
+  const [searchColor,setSearchColor]     = useState("");
+  const [searchMarca,setSearchMarca]     = useState("");
+  const [searchMaterial,setSearchMaterial] = useState("");
+  const [showSug,setShowSug]             = useState(false);
+
+  const allColors = [...new Set(filamentos.map(f=>f.color))].sort();
+  const suggestions = searchColor.length > 0 ? allColors.filter(c=>c.toLowerCase().includes(searchColor.toLowerCase())) : [];
+
+  const filtered = filamentos.filter(f=>{
+    const mc = !searchColor    || f.color.toLowerCase().includes(searchColor.toLowerCase());
+    const mm = !searchMarca    || f.marca.toLowerCase().includes(searchMarca.toLowerCase());
+    const mt = !searchMaterial || f.material.toLowerCase().includes(searchMaterial.toLowerCase());
+    return mc && mm && mt;
+  });
+
+  const sorted = [...filtered].sort((a,b)=>{
+    let va=a[sortCol], vb=b[sortCol];
+    if(sortCol==="stockGramos"||sortCol==="precioUltimo"){ va=Number(va); vb=Number(vb); }
+    else { va=String(va).toLowerCase(); vb=String(vb).toLowerCase(); }
+    if(va<vb) return sortDir==="asc"?-1:1;
+    if(va>vb) return sortDir==="asc"?1:-1;
+    return 0;
+  });
+
+  const toggleSort = col => {
+    if(sortCol===col) setSortDir(d=>d==="asc"?"desc":"asc");
+    else { setSortCol(col); setSortDir("asc"); }
+  };
+  const SortArrow = ({col}) => sortCol!==col
+    ? <span style={{color:"#2a2a2a",marginLeft:3}}>↕</span>
+    : <span style={{color:"#4b7d0b",marginLeft:3}}>{sortDir==="asc"?"↑":"↓"}</span>;
+  const TH = ({col,label,style={}}) => (
+    <div className="sort-th" style={{fontSize:9,color:"#444",letterSpacing:".08em",textTransform:"uppercase",fontWeight:600,...style}} onClick={()=>toggleSort(col)}>
+      {label}<SortArrow col={col}/>
+    </div>
+  );
+  const cols = "1.4fr 0.7fr 0.7fr 0.8fr 1fr 1.6fr 0.7fr 28px";
+
+  return (
+    <div className="card" style={{marginTop:20}}>
+      <div style={{fontSize:12,color:"#aaa",fontWeight:700,marginBottom:14,letterSpacing:".04em",textTransform:"uppercase"}}>Detalle de stock</div>
+      {/* Filters */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+        <div style={{position:"relative"}}>
+          <div className="lbl">Buscar por color</div>
+          <input className="inp" style={{padding:"8px 12px",fontSize:12}} placeholder="Ej: Negro..." value={searchColor}
+            onChange={e=>{setSearchColor(e.target.value);setShowSug(true);}}
+            onFocus={()=>setShowSug(true)} onBlur={()=>setTimeout(()=>setShowSug(false),150)}/>
+          {showSug&&suggestions.length>0&&(
+            <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#141414",border:"1px solid #252525",borderRadius:8,zIndex:100,maxHeight:160,overflowY:"auto",marginTop:2}}>
+              {suggestions.map(s=><div key={s} className="search-suggestion" onMouseDown={()=>{setSearchColor(s);setShowSug(false);}}>{s}</div>)}
+            </div>
+          )}
+        </div>
+        <div>
+          <div className="lbl">Filtrar por marca</div>
+          <input className="inp" style={{padding:"8px 12px",fontSize:12}} placeholder="Ej: Grilon3..." value={searchMarca} onChange={e=>setSearchMarca(e.target.value)}/>
+        </div>
+        <div>
+          <div className="lbl">Filtrar por material</div>
+          <input className="inp" style={{padding:"8px 12px",fontSize:12}} placeholder="Ej: PLA..." value={searchMaterial} onChange={e=>setSearchMaterial(e.target.value)}/>
+        </div>
+      </div>
+      {(searchColor||searchMarca||searchMaterial)&&(
+        <div style={{marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:11,color:"#555"}}>{sorted.length} resultado{sorted.length!==1?"s":""}</span>
+          <button onClick={()=>{setSearchColor("");setSearchMarca("");setSearchMaterial("");}} style={{fontSize:10,background:"none",border:"1px solid #333",borderRadius:4,padding:"2px 8px",color:"#666",cursor:"pointer",fontFamily:"Montserrat,sans-serif"}}>Limpiar filtros</button>
+        </div>
+      )}
+      {/* Header */}
+      <div className="desktop-row" style={{display:"grid",gridTemplateColumns:cols,gap:10,padding:"0 0 10px",borderBottom:"1px solid #1e1e1e",marginBottom:2}}>
+        <TH col="color" label="Color"/><TH col="material" label="Material"/><TH col="tipo" label="Tipo"/>
+        <TH col="marca" label="Marca"/><TH col="stockGramos" label="Stock"/>
+        <div style={{fontSize:9,color:"#555",letterSpacing:".08em",textTransform:"uppercase",fontWeight:600}}>Ubicación</div>
+        <TH col="precioUltimo" label="Valor" style={{textAlign:"right"}}/><div/>
+      </div>
+      {sorted.length===0
+        ?<div style={{color:"#333",fontSize:13,textAlign:"center",padding:"16px 0"}}>Sin resultados.</div>
+        :sorted.map(f=>{
+          const pct=Math.min(100,(f.stockGramos/f.pesoUnitario)*100);
+          const bajo=f.stockGramos>0&&f.stockGramos<STOCK_MINIMO;
+          const sc=bajo?"#cc4444":f.stockGramos===0?"#aa2222":"#4b7d0b";
+          return (
+            <div key={f.key}>
+              <div className="desktop-row" style={{display:"grid",gridTemplateColumns:cols,gap:10,alignItems:"center",borderBottom:"1px solid #1a1a1a",padding:"11px 0"}}>
+                <div style={{fontSize:13,color:"#e0e0e0",fontWeight:600}}>{f.color}</div>
+                <div style={{fontSize:11,color:"#666",fontWeight:500}}>{f.material}</div>
+                <div style={{fontSize:10,color:"#444",fontWeight:500}}>{f.tipo}</div>
+                <div style={{fontSize:11,color:"#666",fontWeight:500}}>{f.marca}</div>
+                <div>
+                  <div style={{fontSize:13,color:sc,fontWeight:700}}>{fmtG(f.stockGramos)}g{bajo&&<span style={{fontSize:9,marginLeft:4}}>⚠</span>}{f.stockGramos===0&&<span style={{fontSize:9,marginLeft:4}}>AGOTADO</span>}</div>
+                  <div className="bar"><div className="bar-fill" style={{width:`${pct}%`,background:sc}}/></div>
+                </div>
+                <PosicionBadge posicion={f.posicion} estante={f.estante}/>
+                <div style={{fontSize:11,color:"#444",textAlign:"right",fontWeight:500}}>{fmtARS(f.precioUltimo/f.pesoUnitario*f.stockGramos)}</div>
+                <button onClick={()=>{if(window.confirm(`¿Eliminás ${f.color} ${f.material} (${f.posicion})?`))onDelete(f.key);}} style={{background:"none",border:"none",cursor:"pointer",color:"#333",fontSize:14,padding:"2px 4px",borderRadius:4,transition:"color .2s"}} onMouseEnter={e=>e.target.style.color="#cc4444"} onMouseLeave={e=>e.target.style.color="#333"} title="Eliminar">×</button>
+              </div>
+              <div className="mobile-card" style={{borderBottom:"1px solid #1a1a1a",padding:"14px 0"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:16,color:"#e0e0e0",fontWeight:700,marginBottom:6}}>{f.color}</div>
+                    <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                      <span style={{fontSize:10,color:"#888",background:"#1a1a1a",border:"1px solid #252525",borderRadius:4,padding:"2px 8px",fontWeight:600}}>{f.material}</span>
+                      <span style={{fontSize:10,color:"#666",background:"#1a1a1a",border:"1px solid #252525",borderRadius:4,padding:"2px 8px"}}>{f.tipo}</span>
+                      <span style={{fontSize:10,color:"#555",background:"#1a1a1a",border:"1px solid #252525",borderRadius:4,padding:"2px 8px"}}>{f.marca}</span>
+                    </div>
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0,marginLeft:16}}>
+                    <div style={{fontSize:18,color:sc,fontWeight:800,lineHeight:1}}>{fmtG(f.stockGramos)}g{bajo&&<span style={{fontSize:11,marginLeft:4}}>⚠</span>}</div>
+                    {f.stockGramos===0&&<div style={{fontSize:10,color:"#aa2222",marginTop:2,fontWeight:700}}>AGOTADO</div>}
+                    <div className="bar" style={{width:72,marginTop:6,marginLeft:"auto"}}><div className="bar-fill" style={{width:`${pct}%`,background:sc}}/></div>
+                  </div>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:4}}>
+                  <PosicionBadge posicion={f.posicion} estante={f.estante}/>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <div style={{fontSize:12,color:"#555",fontWeight:500}}>{fmtARS(f.precioUltimo/f.pesoUnitario*f.stockGramos)}</div>
+                    <button onClick={()=>{if(window.confirm(`¿Eliminás ${f.color} ${f.material}?`))onDelete(f.key);}} style={{background:"none",border:"1px solid #2a2a2a",cursor:"pointer",color:"#444",fontSize:12,padding:"2px 8px",borderRadius:4,fontFamily:"Montserrat,sans-serif"}}>× Eliminar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })
+      }
+    </div>
+  );
+}
+
+
 // ── AJUSTE STOCK ──────────────────────────────────────────────────────────────
-function AjusteStock({ filamentos, maestros, onAjuste }) {
+function AjusteStock({ filamentos, maestros, onAjuste, onDelete }) {
   const [selectedKey, setSelectedKey] = useState("");
   const [pesoBrutoCargado, setPesoBrutoCargado] = useState("");
   const [marcaBobina, setMarcaBobina] = useState("");
