@@ -183,7 +183,6 @@ export default function App() {
   const [productos, setProductos] = useState(() => loadLS(KEYS.productos, []));
   const [ventas, setVentas]     = useState(() => loadLS(KEYS.ventas, []));
   const [proveedores, setProveedores] = useState(() => loadLS(KEYS.proveedores, []));
-  const [toast, setToast]       = useState(null);
 
   const save = (key, setter) => d => { setter(d); saveLS(key, d); };
   const saveRecetas   = save(KEYS.recetas,    setRecetas);
