@@ -1418,21 +1418,24 @@ function Maestros({ maestros, filamentos, onAdd, onDelete, onRename, onPrecioUpd
           <tbody>
             {(maestros.bobinas||[]).map((b,i)=>(
               <tr key={i} style={{borderBottom:"1px solid #1a1a1a"}}>
-                {editingBobina===i
-                  ? <>
-                      <td style={{padding:"6px 4px"}}><input className="inp" style={{padding:"6px 10px",fontSize:12}} value={b.marca} onChange={e=>{const nb=[...maestros.bobinas];nb[i]={...nb[i],marca:e.target.value};onAdd("bobinas_update",nb);}}/></td>
-                      <td style={{padding:"6px 4px"}}><input className="inp" style={{padding:"6px 10px",fontSize:12,width:100}} type="number" value={b.pesoBobina} onChange={e=>{const nb=[...maestros.bobinas];nb[i]={...nb[i],pesoBobina:Number(e.target.value)};onAdd("bobinas_update",nb);}}/></td>
-                      <td style={{padding:"6px 4px"}}><button className="btn-add" onClick={()=>setEditingBobina(null)}>✓ Listo</button></td>
-                    </>
-                  : <>
-                      <td style={{padding:"8px",color:"#ccc",fontWeight:500}}>{b.marca}</td>
-                      <td style={{padding:"8px",color:"#4b7d0b",fontWeight:700}}>{fmtG(b.pesoBobina)}g</td>
-                      <td style={{padding:"8px",display:"flex",gap:6}}>
+                {editingBobina===i ? (
+                  <>
+                    <td style={{padding:"6px 4px"}}><input className="inp" style={{padding:"6px 10px",fontSize:12}} value={b.marca} onChange={e=>{const nb=[...maestros.bobinas];nb[i]={...nb[i],marca:e.target.value};onAdd("bobinas_update",nb);}}/></td>
+                    <td style={{padding:"6px 4px"}}><input className="inp" style={{padding:"6px 10px",fontSize:12,width:100}} type="number" value={b.pesoBobina} onChange={e=>{const nb=[...maestros.bobinas];nb[i]={...nb[i],pesoBobina:Number(e.target.value)};onAdd("bobinas_update",nb);}}/></td>
+                    <td style={{padding:"6px 4px"}}><button className="btn-add" onClick={()=>setEditingBobina(null)}>✓ Listo</button></td>
+                  </>
+                ) : (
+                  <>
+                    <td style={{padding:"8px",color:"#ccc",fontWeight:500}}>{b.marca}</td>
+                    <td style={{padding:"8px",color:"#4b7d0b",fontWeight:700}}>{fmtG(b.pesoBobina)}g</td>
+                    <td style={{padding:"8px"}}>
+                      <div style={{display:"flex",gap:6}}>
                         <button className="btn-icon" style={{color:"#4b7d0b"}} onClick={()=>setEditingBobina(i)}>✎</button>
                         <button className="btn-icon" style={{color:"#555"}} onClick={()=>{if(window.confirm(`¿Eliminás "${b.marca}"?`)){const nb=maestros.bobinas.filter((_,j)=>j!==i);onAdd("bobinas_update",nb);}}}>×</button>
-                      </td>
-                    </>
-                }
+                      </div>
+                    </td>
+                  </>
+                )}
               </tr>
             ))}
           </tbody>
