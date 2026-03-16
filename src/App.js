@@ -814,7 +814,7 @@ function AjusteStock({ filamentos, maestros, onAjuste }) {
               (!filtMarca||f.marca===filtMarca)
             ).map(f=>(
               <option key={f.key} value={f.key}>
-                {f.color} · {f.tipo} · {f.material} · {f.marca} — {fmtG(f.stockGramos)}g{f.posicion?` (${f.posicion})`:""}
+                {f.color} · {f.tipo} · {f.material} · {f.marca}{f.estante?` — ${f.estante.replace("Estante ","")}`:""}{f.posicion?` ${f.posicion}`:""} — {fmtG(f.stockGramos)}g
               </option>
             ))}
           </select>
