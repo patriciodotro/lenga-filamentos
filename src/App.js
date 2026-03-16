@@ -266,7 +266,7 @@ export default function App() {
           </div>
         </div>
         <div style={{paddingTop:28,paddingBottom:48}}>
-          {tab==="dashboard"  && <Dashboard filamentos={filamentos} movimientos={movimientos}/>}
+          {tab==="dashboard"  && <Dashboard filamentos={filamentos} movimientos={movimientos} onDelete={key=>saveFil(filamentos.filter(f=>f.key!==key))}/>}
           {tab==="compra"     && <FormCompra maestros={maestros} onSubmit={handleCompra}/>}
           {tab==="impresion"  && <FormImpresion filamentos={filamentos} onSubmit={handleImpresion}/>}
           {tab==="historial"  && <Historial movimientos={movimientos}/>}
@@ -284,7 +284,7 @@ export default function App() {
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
-function Dashboard({ filamentos, movimientos }) {
+function Dashboard({ filamentos, movimientos, onDelete }) {
   const totalStock      = filamentos.reduce((a,f)=>a+f.stockGramos,0);
   const valorInventario = filamentos.reduce((a,f)=>a+(f.precioUltimo/f.pesoUnitario)*f.stockGramos,0);
   const alertas  = filamentos.filter(f=>f.stockGramos>0&&f.stockGramos<STOCK_MINIMO).length;
@@ -351,7 +351,7 @@ function Dashboard({ filamentos, movimientos }) {
     </div>
   );
 
-  const cols = "1.4fr 0.7fr 0.7fr 0.8fr 1fr 1.6fr 0.7fr";
+  const cols = "1.4fr 0.7fr 0.7fr 0.8fr 1fr 1.6fr 0.7fr 28px";
 
   return (
     <div>
@@ -469,6 +469,7 @@ function Dashboard({ filamentos, movimientos }) {
           <TH col="stockGramos"  label="Stock"/>
           <div style={{fontSize:9,color:"#555",letterSpacing:".08em",textTransform:"uppercase",fontWeight:600}}>Ubicación</div>
           <TH col="precioUltimo" label="Valor" style={{textAlign:"right"}}/>
+          <div/>
         </div>
         <div className="mobile-sort-bar" style={{display:"none",gap:8,marginBottom:12,flexWrap:"wrap"}}>
           {[["color","Color"],["material","Material"],["stockGramos","Stock"],["precioUltimo","Valor"]].map(([col,label])=>(
@@ -497,6 +498,7 @@ function Dashboard({ filamentos, movimientos }) {
                   </div>
                   <PosicionBadge posicion={f.posicion} estante={f.estante}/>
                   <div style={{fontSize:11,color:"#444",textAlign:"right",fontWeight:500}}>{fmtARS(f.precioUltimo/f.pesoUnitario*f.stockGramos)}</div>
+                <button onClick={()=>{if(window.confirm(`¿Eliminás ${f.color} ${f.material} (${f.posicion})?`))onDelete(f.key);}} style={{background:"none",border:"none",cursor:"pointer",color:"#333",fontSize:14,padding:"2px 4px",borderRadius:4,transition:"color .2s"}} onMouseEnter={e=>e.target.style.color="#cc4444"} onMouseLeave={e=>e.target.style.color="#333"} title="Eliminar">×</button>
                 </div>
                 <div className="mobile-card" style={{borderBottom:"1px solid #1a1a1a",padding:"14px 0"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
@@ -516,7 +518,10 @@ function Dashboard({ filamentos, movimientos }) {
                   </div>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:4}}>
                     <PosicionBadge posicion={f.posicion} estante={f.estante}/>
-                    <div style={{fontSize:12,color:"#555",fontWeight:500}}>{fmtARS(f.precioUltimo/f.pesoUnitario*f.stockGramos)}</div>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <div style={{fontSize:12,color:"#555",fontWeight:500}}>{fmtARS(f.precioUltimo/f.pesoUnitario*f.stockGramos)}</div>
+                      <button onClick={()=>{if(window.confirm(`¿Eliminás ${f.color} ${f.material} (${f.posicion})?`))onDelete(f.key);}} style={{background:"none",border:"1px solid #2a2a2a",cursor:"pointer",color:"#444",fontSize:12,padding:"2px 8px",borderRadius:4,fontFamily:"Montserrat,sans-serif"}} title="Eliminar">× Eliminar</button>
+                    </div>
                   </div>
                 </div>
               </div>
