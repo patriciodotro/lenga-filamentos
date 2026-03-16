@@ -171,8 +171,7 @@ export default function App() {
     if (!f || f.length === 0) saveLS(DB_KEY, STOCK_INICIAL);
     setFilamentos(filData);
     setMovs(m||[]);
-    const maData = ma || MAESTROS_DEFAULT;
-    if (!maData.bobinas) maData.bobinas = MAESTROS_DEFAULT.bobinas;
+    const maData = ma ? {...ma, bobinas: ma.bobinas || MAESTROS_DEFAULT.bobinas} : MAESTROS_DEFAULT;
     setMaestros(maData);
     setLoaded(true);
   }, []);
@@ -277,7 +276,7 @@ export default function App() {
           {tab==="ajuste"    && <AjusteStock filamentos={filamentos} maestros={maestros} onAjuste={handleAjuste} onDelete={key=>saveFil(filamentos.filter(f=>f.key!==key))}/>}
           {tab==="calculadora" && <Calculadora filamentos={filamentos}/>}
           {tab==="maestros"   && <Maestros maestros={maestros} filamentos={filamentos}
-            onAdd={(l,v)=>{ if(l==="bobinas_update"){saveMaes({...maestros,bobinas:v});}else{saveMaes({...maestros,[l]:[...maestros[l],v]});}}}
+            onAdd={(l,v)=>{ if(l==="bobinas_update"){saveMaes({...maestros,bobinas:v});}else{const updated=[...maestros[l],v].sort((a,b)=>typeof a==="string"?a.localeCompare(b):0);saveMaes({...maestros,[l]:updated});}}}
             onDelete={(l,v)=>saveMaes({...maestros,[l]:maestros[l].filter(x=>x!==v)})}
             onRename={handleRename}
             onPrecioUpdate={handlePrecioUpdate}/>}
