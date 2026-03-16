@@ -138,6 +138,7 @@ const CSS = `
   .search-suggestion:hover { background: #1a1a1a; color: #e0e0e0; }
   .desktop-row { display: grid !important; } .mobile-card { display: none !important; }
   ::-webkit-scrollbar { width: 3px; } ::-webkit-scrollbar-track { background: #0d0d0d; } ::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+  .ajuste-grid { grid-template-columns: 1fr !important; }
   @media (max-width: 700px) {
     .stats-grid { grid-template-columns: 1fr 1fr !important; }
     .charts-grid { grid-template-columns: 1fr !important; }
@@ -913,8 +914,10 @@ function AjusteStock({ filamentos, maestros, onAjuste, onDelete }) {
   };
 
   return (
-    <div style={{maxWidth:560}}>
+    <div style={{maxWidth:1400}}>
       <div className="section-title">Ajuste de stock</div>
+      <div style={{display:"grid",gridTemplateColumns:"500px 1fr",gap:20,alignItems:"start"}} className="ajuste-grid">
+      <div>
       <div style={{fontSize:12,color:"#555",marginBottom:20,lineHeight:1.6}}>
         Usá esta sección para corregir el stock de una bobina pesándola en ese momento. Ingresá el peso bruto (bobina + filamento) y el sistema descuenta el peso de la bobina vacía automáticamente.
       </div>
@@ -1029,7 +1032,9 @@ function AjusteStock({ filamentos, maestros, onAjuste, onDelete }) {
         </button>
       </div>
 
+      </div>
       <StockTabla filamentos={filamentos} onDelete={onDelete}/>
+      </div>
     </div>
   );
 }
