@@ -161,11 +161,12 @@ export default function App() {
   const [showStockMenu, setShowStockMenu] = useState(false);
 
   useEffect(() => {
+    const f  = loadLS(DB_KEY, null);
     const m  = loadLS(MOV_KEY, []);
     const ma = loadLS(MAEST_KEY, null);
-    // v4: split multi-position entries into individual rows
-    saveLS(DB_KEY, STOCK_INICIAL);
-    setFilamentos(STOCK_INICIAL);
+    const filData = f && f.length > 0 ? f : STOCK_INICIAL;
+    if (!f || f.length === 0) saveLS(DB_KEY, STOCK_INICIAL);
+    setFilamentos(filData);
     setMovs(m||[]);
     const maData = ma || MAESTROS_DEFAULT;
     if (!maData.bobinas) maData.bobinas = MAESTROS_DEFAULT.bobinas;
