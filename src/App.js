@@ -178,11 +178,11 @@ export default function App() {
   const [toast, setToast]           = useState(null);
   const [showStockMenu, setShowStockMenu] = useState(false);
   const [showNegocioMenu, setShowNegocioMenu] = useState(false);
-  const [recetas, setRecetas]   = useState(() => loadLS(KEYS.recetas, []));
-  const [insumos, setInsumos]   = useState(() => loadLS(KEYS.insumos, []));
-  const [productos, setProductos] = useState(() => loadLS(KEYS.productos, []));
-  const [ventas, setVentas]     = useState(() => loadLS(KEYS.ventas, []));
-  const [proveedores, setProveedores] = useState(() => loadLS(KEYS.proveedores, []));
+  const [recetas, setRecetas]   = useState(() => loadLS(BIZ_KEYS.recetas, []));
+  const [insumos, setInsumos]   = useState(() => loadLS(BIZ_KEYS.insumos, []));
+  const [productos, setProductos] = useState(() => loadLS(BIZ_KEYS.productos, []));
+  const [ventas, setVentas]     = useState(() => loadLS(BIZ_KEYS.ventas, []));
+  const [proveedores, setProveedores] = useState(() => loadLS(BIZ_KEYS.proveedores, []));
 
   useEffect(() => {
     const f  = loadLS(DB_KEY, null);
