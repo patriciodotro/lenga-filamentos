@@ -1387,7 +1387,7 @@ function Maestros({ maestros, filamentos, onAdd, onDelete, onRename, onPrecioUpd
                       : <span style={{color:"#4b7d0b",fontWeight:700}}>{fmtARS(row.precio)}</span>
                     }
                   </td>
-                  <td style={{padding:"8px",color:"#444",fontSize:11}}>{row.count} rollo{row.count!==1?"s":""}</td></td>
+                  <td style={{padding:"8px",color:"#444",fontSize:11}}>{row.count} rollo{row.count!==1?"s":""}</td>
                   <td style={{padding:"8px 4px"}}>
                     {isEditing
                       ? <div style={{display:"flex",gap:6}}>
