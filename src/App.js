@@ -1675,3 +1675,637 @@ export default function App() {
   if(screen==="granja") return <AppGranja onBack={()=>setScreen("home")}/>;
   return <HomeHub onSelect={setScreen}/>;
 }
+</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EDIT MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function EditModal({value,onSave,onClose}) {
+  const [val,setVal]=useState(value);
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:13,color:"#aaa",marginBottom:16,fontWeight:600}}>Editar valor</div>
+        <input className="inp" value={val} onChange={e=>setVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")onSave(val);if(e.key==="Escape")onClose();}} autoFocus/>
+        <div style={{display:"flex",gap:8,marginTop:14}}>
+          <button onClick={()=>onSave(val)} style={{flex:1,background:"#4b7d0b",color:"#fff",border:"none",borderRadius:8,padding:"10px",fontFamily:"'Montserrat',sans-serif",fontSize:12,cursor:"pointer",fontWeight:700}}>Guardar</button>
+          <button onClick={onClose} style={{flex:1,background:"none",color:"#666",border:"1px solid #333",borderRadius:8,padding:"10px",fontFamily:"'Montserrat',sans-serif",fontSize:12,cursor:"pointer"}}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAESTROS
+// ─────────────────────────────────────────────────────────────────────────────
+function Maestros({maestros,filamentos,onAdd,onDelete,onRename,onPrecioUpdate}) {
+  const [newVals,setNewVals]=useState({materiales:"",tipos:"",marcas:"",colores:"",estantes:"",posiciones:""});
+  const [editing,setEditing]=useState(null);
+  const [newBobina,setNewBobina]=useState({marca:"",pesoBobina:""});
+  const [editingBobina,setEditingBobina]=useState(null);
+  const [editingPrecio,setEditingPrecio]=useState(null);
+  const [precioEdit,setPrecioEdit]=useState("");
+  const add=lista=>{const val=newVals[lista].trim();if(!val)return;if(maestros[lista].includes(val))return alert("Ya existe.");onAdd(lista,val);setNewVals(v=>({...v,[lista]:""}));};
+  const saveEdit=nv=>{const t=nv.trim();if(!t)return;if(t===editing.value){setEditing(null);return;}if(maestros[editing.lista].includes(t)){alert("Ya existe.");return;}onRename(editing.lista,editing.value,t);setEditing(null);};
+  const LISTAS=[["materiales","Materiales"],["tipos","Tipos de filamento"],["marcas","Marcas"],["colores","Colores"],["estantes","Estantes"],["posiciones","Posiciones"]];
+  return (
+    <div>
+      <div className="section-title">Maestros</div>
+      <div className="card" style={{marginBottom:16,padding:20}}>
+        <div style={{fontSize:12,color:"#aaa",fontWeight:700,marginBottom:4,letterSpacing:".04em",textTransform:"uppercase"}}>Precios por material</div>
+        <div style={{fontSize:11,color:"#333",marginBottom:12}}>El cambio se aplica a todos los filamentos de esa combinación.</div>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+          <thead><tr style={{borderBottom:"1px solid #252525"}}>{["Marca","Material","Tipo","Precio / kg","Rollos",""].map((h,i)=><th key={i} style={{textAlign:"left",padding:"6px 8px",fontSize:10,color:"#444",letterSpacing:".08em",textTransform:"uppercase",fontWeight:600}}>{h}</th>)}</tr></thead>
+          <tbody>
+            {Object.values((filamentos||[]).reduce((acc,f)=>{const k=`${f.marca}||${f.material}||${f.tipo}`;if(!acc[k])acc[k]={marca:f.marca,material:f.material,tipo:f.tipo,precio:f.precioUltimo,count:0};acc[k].count++;return acc;},{})).sort((a,b)=>a.marca.localeCompare(b.marca)||a.material.localeCompare(b.material)).map((row,i)=>{
+              const isEditing=editingPrecio&&editingPrecio.marca===row.marca&&editingPrecio.material===row.material&&editingPrecio.tipo===row.tipo;
+              return(
+                <tr key={i} style={{borderBottom:"1px solid #1a1a1a"}}>
+                  <td style={{padding:"8px",color:"#ccc",fontWeight:500}}>{row.marca}</td>
+                  <td style={{padding:"8px",color:"#888"}}>{row.material}</td>
+                  <td style={{padding:"8px",color:"#666"}}>{row.tipo}</td>
+                  <td style={{padding:"8px 4px"}}>{isEditing?<input className="inp" type="number" style={{padding:"5px 10px",fontSize:12,width:120}} value={precioEdit} onChange={e=>setPrecioEdit(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&precioEdit){onPrecioUpdate(row.marca,row.material,row.tipo,Number(precioEdit));setEditingPrecio(null);}if(e.key==="Escape")setEditingPrecio(null);}} autoFocus/>:<span style={{color:"#4b7d0b",fontWeight:700}}>{fmtARS(row.precio)}</span>}</td>
+                  <td style={{padding:"8px",color:"#444",fontSize:11}}>{row.count} rollo{row.count!==1?"s":""}</td>
+                  <td style={{padding:"8px 4px"}}>{isEditing?<div style={{display:"flex",gap:6}}><button className="btn-add" onClick={()=>{if(precioEdit){onPrecioUpdate(row.marca,row.material,row.tipo,Number(precioEdit));setEditingPrecio(null);}}} style={{borderColor:"#4b7d0b",color:"#4b7d0b"}}>✓</button><button className="btn-icon" style={{color:"#555"}} onClick={()=>setEditingPrecio(null)}>✕</button></div>:<button className="btn-icon" style={{color:"#4b7d0b"}} onClick={()=>{setEditingPrecio({marca:row.marca,material:row.material,tipo:row.tipo});setPrecioEdit(String(row.precio));}}>✎</button>}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="card" style={{marginBottom:16,padding:20}}>
+        <div style={{fontSize:12,color:"#aaa",fontWeight:700,marginBottom:14,letterSpacing:".04em",textTransform:"uppercase"}}>Pesos de bobinas vacías</div>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+          <thead><tr style={{borderBottom:"1px solid #252525"}}>{["Marca bobina","Peso (g)",""].map(h=><th key={h} style={{textAlign:"left",padding:"6px 8px",fontSize:10,color:"#444",letterSpacing:".08em",textTransform:"uppercase",fontWeight:600}}>{h}</th>)}</tr></thead>
+          <tbody>
+            {(maestros.bobinas||[]).map((b,i)=>(
+              <tr key={i} style={{borderBottom:"1px solid #1a1a1a"}}>
+                {editingBobina===i?(
+                  <><td style={{padding:"6px 4px"}}><input className="inp" style={{padding:"6px 10px",fontSize:12}} value={b.marca} onChange={e=>{const nb=[...maestros.bobinas];nb[i]={...nb[i],marca:e.target.value};onAdd("bobinas_update",nb);}}/></td>
+                  <td style={{padding:"6px 4px"}}><input className="inp" style={{padding:"6px 10px",fontSize:12,width:100}} type="number" value={b.pesoBobina} onChange={e=>{const nb=[...maestros.bobinas];nb[i]={...nb[i],pesoBobina:Number(e.target.value)};onAdd("bobinas_update",nb);}}/></td>
+                  <td style={{padding:"6px 4px"}}><button className="btn-add" onClick={()=>setEditingBobina(null)}>✓ Listo</button></td></>
+                ):(
+                  <><td style={{padding:"8px",color:"#ccc",fontWeight:500}}>{b.marca}</td>
+                  <td style={{padding:"8px",color:"#4b7d0b",fontWeight:700}}>{fmtG(b.pesoBobina)}g</td>
+                  <td style={{padding:"8px"}}><div style={{display:"flex",gap:6}}><button className="btn-icon" style={{color:"#4b7d0b"}} onClick={()=>setEditingBobina(i)}>✎</button><button className="btn-icon" style={{color:"#555"}} onClick={()=>{if(window.confirm(`¿Eliminás "${b.marca}"?`)){const nb=maestros.bobinas.filter((_,j)=>j!==i);onAdd("bobinas_update",nb);}}}>×</button></div></td></>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div style={{display:"flex",gap:8,marginTop:14}}>
+          <input className="inp" style={{flex:2,padding:"8px 12px",fontSize:12}} placeholder="Marca de bobina..." value={newBobina.marca} onChange={e=>setNewBobina(v=>({...v,marca:e.target.value}))}/>
+          <input className="inp" style={{width:110,padding:"8px 12px",fontSize:12}} type="number" placeholder="Peso (g)" value={newBobina.pesoBobina} onChange={e=>setNewBobina(v=>({...v,pesoBobina:e.target.value}))}/>
+          <button className="btn-add" onClick={()=>{if(!newBobina.marca||!newBobina.pesoBobina)return;onAdd("bobinas_update",[...(maestros.bobinas||[]),{marca:newBobina.marca,pesoBobina:Number(newBobina.pesoBobina)}]);setNewBobina({marca:"",pesoBobina:""});}}>+ Agregar</button>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+        {LISTAS.map(([lista,titulo])=>(
+          <div key={lista} className="card" style={{padding:16}}>
+            <div style={{fontSize:11,color:"#555",fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",marginBottom:12}}>{titulo}</div>
+            {maestros[lista].map(item=>(
+              <div key={item} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px solid #141414"}}>
+                <span style={{fontSize:12,color:"#888"}}>{item}</span>
+                <div style={{display:"flex",gap:4}}>
+                  <button className="btn-icon" style={{color:"#4b7d0b",fontSize:12}} onClick={()=>setEditing({lista,value:item})}>✎</button>
+                  <button className="btn-icon" style={{color:"#444",fontSize:12}} onClick={()=>{if(window.confirm(`¿Eliminás "${item}"?`))onDelete(lista,item);}}>×</button>
+                </div>
+              </div>
+            ))}
+            <div style={{display:"flex",gap:6,marginTop:10}}>
+              <input className="inp" style={{padding:"7px 10px",fontSize:12}} placeholder={`Nuevo...`} value={newVals[lista]} onChange={e=>setNewVals(v=>({...v,[lista]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter")add(lista);}}/>
+              <button className="btn-add" onClick={()=>add(lista)}>+</button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {editing&&<EditModal value={editing.value} onSave={saveEdit} onClose={()=>setEditing(null)}/>}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RECETAS
+// ─────────────────────────────────────────────────────────────────────────────
+function Recetas({recetas,onSave,toast}) {
+  const [modal,setModal]=useState(null);
+  const [ver,setVer]=useState(null);
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+        <div className="section-title" style={{marginBottom:0}}>Recetas de productos</div>
+        <button className="btn" onClick={()=>setModal({})}>+ Nueva receta</button>
+      </div>
+      {recetas.length===0?<div className="card" style={{textAlign:"center",padding:40,color:"#333"}}>No hay recetas todavía.</div>:(
+        <div className="grid-3" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16}}>
+          {recetas.map(r=>(
+            <div key={r.id} className="card" style={{display:"flex",flexDirection:"column",gap:12,padding:16}}>
+              {r.foto?<img src={r.foto} alt={r.nombre} style={{width:"100%",height:120,objectFit:"cover",borderRadius:8}}/>:<div style={{height:60,background:"#141414",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>🧪</div>}
+              <div style={{fontWeight:700,fontSize:14,color:"#e0e0e0"}}>{r.nombre}</div>
+              {r.descripcion&&<div style={{fontSize:11,color:"#444"}}>{r.descripcion}</div>}
+              <div style={{display:"flex",gap:6}}>
+                <button className="btn-add" style={{flex:1,fontSize:11}} onClick={()=>setVer(r)}>Ver receta</button>
+                <button className="btn-add" style={{flex:1,fontSize:11}} onClick={()=>setModal(r)}>Editar</button>
+                <button className="btn-icon" style={{color:"#444"}} onClick={()=>{if(window.confirm("¿Eliminás?"))onSave(recetas.filter(x=>x.id!==r.id));}}>×</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {modal!==null&&<RecetaModal receta={modal} onSave={r=>{const nuevo=r.id?recetas.map(x=>x.id===r.id?r:x):[...recetas,{...r,id:uid()}];onSave(nuevo);setModal(null);toast("✓ Receta guardada");}} onClose={()=>setModal(null)}/>}
+      {ver&&<RecetaVer receta={ver} onClose={()=>setVer(null)}/>}
+    </div>
+  );
+}
+function RecetaModal({receta,onSave,onClose}) {
+  const [form,setForm]=useState({nombre:"",descripcion:"",pasos:[],foto:"",...receta});
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  const handleFoto=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>set("foto",ev.target.result);r.readAsDataURL(file);};
+  const addPaso=()=>set("pasos",[...(form.pasos||[]),{id:uid(),texto:""}]);
+  const setPaso=(i,v)=>set("pasos",form.pasos.map((p,idx)=>idx===i?{...p,texto:v}:p));
+  const removePaso=i=>set("pasos",form.pasos.filter((_,idx)=>idx!==i));
+  return(
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:15,fontWeight:700,color:"#fff",marginBottom:20}}>{form.id?"Editar receta":"Nueva receta"}</div>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div><div className="lbl">Nombre *</div><input className="inp" value={form.nombre} onChange={e=>set("nombre",e.target.value)}/></div>
+          <div><div className="lbl">Descripción</div><textarea className="inp" value={form.descripcion} onChange={e=>set("descripcion",e.target.value)} style={{resize:"vertical",minHeight:60}}/></div>
+          <div><div className="lbl">Foto</div><input type="file" accept="image/*" onChange={handleFoto} style={{fontSize:11,color:"#666"}}/>{form.foto&&<img src={form.foto} alt="" style={{width:"100%",height:80,objectFit:"cover",borderRadius:6,marginTop:6}}/>}</div>
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><div className="lbl" style={{marginBottom:0}}>Pasos</div><button className="btn-add" onClick={addPaso}>+ Paso</button></div>
+            {(form.pasos||[]).map((p,i)=>(
+              <div key={p.id} style={{display:"flex",gap:8,alignItems:"center",marginBottom:6}}>
+                <span style={{fontSize:11,color:"#444",fontWeight:700,width:20}}>{i+1}.</span>
+                <input className="inp" style={{flex:1,fontSize:12}} value={p.texto} onChange={e=>setPaso(i,e.target.value)} placeholder={`Paso ${i+1}...`}/>
+                <button className="btn-icon" style={{color:"#555"}} onClick={()=>removePaso(i)}>×</button>
+              </div>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:8,marginTop:8}}>
+            <button className="btn" style={{flex:1}} onClick={()=>{if(!form.nombre.trim())return alert("Nombre requerido.");onSave(form);}}>Guardar</button>
+            <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+function RecetaVer({receta,onClose}) {
+  return(
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        {receta.foto&&<img src={receta.foto} alt={receta.nombre} style={{width:"100%",height:140,objectFit:"cover",borderRadius:8,marginBottom:16}}/>}
+        <div style={{fontSize:16,fontWeight:800,color:"#e0e0e0",marginBottom:8}}>{receta.nombre}</div>
+        {receta.descripcion&&<div style={{fontSize:12,color:"#555",marginBottom:16}}>{receta.descripcion}</div>}
+        {receta.pasos&&receta.pasos.length>0&&(
+          <div>
+            <div style={{fontSize:11,color:"#444",letterSpacing:".08em",textTransform:"uppercase",fontWeight:700,marginBottom:10}}>Pasos</div>
+            {receta.pasos.map((p,i)=><div key={p.id} style={{display:"flex",gap:10,marginBottom:8}}><span style={{fontSize:11,color:"#4b7d0b",fontWeight:800,width:20}}>{i+1}.</span><span style={{fontSize:12,color:"#888"}}>{p.texto}</span></div>)}
+          </div>
+        )}
+        <button className="btn-ghost" onClick={onClose} style={{marginTop:16,width:"100%"}}>Cerrar</button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INSUMOS
+// ─────────────────────────────────────────────────────────────────────────────
+const CATEGORIAS_INS=["Packaging","Limpieza","Herramientas","Electrónica","Otros"];
+function Insumos({insumos,onSave,toast}) {
+  const [modal,setModal]=useState(null);
+  const [movModal,setMovModal]=useState(null);
+  const handleMov=(ins,tipo)=>setMovModal({...ins,movTipo:tipo});
+  const saveMov=(id,tipo,cantidad,nota)=>{
+    const nuevos=insumos.map(ins=>{
+      if(ins.id!==id) return ins;
+      const nuevo=tipo==="entrada"?(Number(ins.stock)||0)+Number(cantidad):Math.max(0,(Number(ins.stock)||0)-Number(cantidad));
+      return {...ins,stock:nuevo,movimientos:[...(ins.movimientos||[]),{tipo,cantidad:Number(cantidad),nota,fecha:new Date().toISOString()}]};
+    });
+    onSave(nuevos);toast("✓ Movimiento registrado");setMovModal(null);
+  };
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+        <div className="section-title" style={{marginBottom:0}}>Control de insumos</div>
+        <button className="btn" onClick={()=>setModal({})}>+ Nuevo insumo</button>
+      </div>
+      {CATEGORIAS_INS.map(cat=>{
+        const items=insumos.filter(i=>i.categoria===cat);
+        if(items.length===0) return null;
+        return(
+          <div key={cat} style={{marginBottom:24}}>
+            <div style={{fontSize:11,color:"#555",letterSpacing:".1em",textTransform:"uppercase",fontWeight:700,marginBottom:10}}>{cat}</div>
+            <div className="card" style={{padding:0}}>
+              {items.map((ins,idx)=>{
+                const bajo=ins.stockMinimo&&(Number(ins.stock)||0)<Number(ins.stockMinimo);
+                return(
+                  <div key={ins.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 20px",borderBottom:idx<items.length-1?"1px solid #1a1a1a":"none"}}>
+                    <div>
+                      <div style={{fontSize:13,color:"#e0e0e0",fontWeight:600}}>{ins.nombre}</div>
+                      {ins.proveedor&&<div style={{fontSize:11,color:"#444",marginTop:2}}>{ins.proveedor}</div>}
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:12}}>
+                      <div style={{textAlign:"right"}}>
+                        <div style={{fontSize:14,color:bajo?"#cc4444":"#4b7d0b",fontWeight:700}}>{fmtG(Number(ins.stock)||0)} {ins.unidad}</div>
+                        {bajo&&<div style={{fontSize:10,color:"#cc4444"}}>Stock bajo</div>}
+                      </div>
+                      <div style={{display:"flex",gap:4}}>
+                        <button className="btn-add" style={{fontSize:11,color:"#4b7d0b",borderColor:"#4b7d0b33"}} onClick={()=>handleMov(ins,"entrada")}>+ Entrada</button>
+                        <button className="btn-add" style={{fontSize:11,color:"#cc5555",borderColor:"#cc555533"}} onClick={()=>handleMov(ins,"salida")}>- Salida</button>
+                        <button className="btn-icon" style={{color:"#4b7d0b",fontSize:12}} onClick={()=>setModal(ins)}>✎</button>
+                        <button className="btn-icon" style={{color:"#444",fontSize:12}} onClick={()=>{if(window.confirm("¿Eliminás?"))onSave(insumos.filter(x=>x.id!==ins.id));}}>×</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      {insumos.length===0&&<div className="card" style={{padding:32,textAlign:"center",color:"#333"}}>No hay insumos cargados.</div>}
+      {modal!==null&&(
+        <div className="modal-bg" onClick={()=>setModal(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:15,fontWeight:700,color:"#fff",marginBottom:20}}>{modal.id?"Editar insumo":"Nuevo insumo"}</div>
+            <InsumoForm insumo={modal} onSave={ins=>{const nuevo=ins.id?insumos.map(x=>x.id===ins.id?ins:x):[...insumos,{...ins,id:uid(),stock:Number(ins.stockInicial||0),movimientos:[]}];onSave(nuevo);setModal(null);toast("✓ Guardado");}} onClose={()=>setModal(null)}/>
+          </div>
+        </div>
+      )}
+      {movModal&&<MovModal item={movModal} onSave={(cant,nota)=>saveMov(movModal.id,movModal.movTipo,cant,nota)} onClose={()=>setMovModal(null)}/>}
+    </div>
+  );
+}
+function InsumoForm({insumo,onSave,onClose}) {
+  const [form,setForm]=useState({nombre:"",unidad:"unidad",categoria:"",proveedor:"",stockMinimo:"",precioUnitario:"",stockInicial:"",...insumo});
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:12}}>
+      <div className="grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div style={{gridColumn:"1/-1"}}><div className="lbl">Nombre *</div><input className="inp" value={form.nombre} onChange={e=>set("nombre",e.target.value)}/></div>
+        <div><div className="lbl">Unidad</div><input className="inp" placeholder="unidad / kg / litro..." value={form.unidad} onChange={e=>set("unidad",e.target.value)}/></div>
+        <div><div className="lbl">Categoría</div><select className="inp" value={form.categoria} onChange={e=>set("categoria",e.target.value)}><option value="">—</option>{CATEGORIAS_INS.map(c=><option key={c}>{c}</option>)}</select></div>
+        <div><div className="lbl">Proveedor</div><input className="inp" value={form.proveedor} onChange={e=>set("proveedor",e.target.value)}/></div>
+        <div><div className="lbl">Stock mínimo</div><input className="inp" type="number" value={form.stockMinimo} onChange={e=>set("stockMinimo",e.target.value)}/></div>
+        <div><div className="lbl">Precio unitario (ARS)</div><input className="inp" type="number" value={form.precioUnitario} onChange={e=>set("precioUnitario",e.target.value)}/></div>
+        {!form.id&&<div><div className="lbl">Stock inicial</div><input className="inp" type="number" value={form.stockInicial||""} onChange={e=>set("stockInicial",e.target.value)}/></div>}
+      </div>
+      <div style={{display:"flex",gap:8,marginTop:8}}>
+        <button className="btn" style={{flex:1}} onClick={()=>{if(!form.nombre.trim())return alert("Nombre requerido.");onSave(form);}}>Guardar</button>
+        <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+      </div>
+    </div>
+  );
+}
+function MovModal({item,onSave,onClose}) {
+  const [cant,setCant]=useState("");const [nota,setNota]=useState("");
+  return(
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" style={{maxWidth:360}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:14,fontWeight:700,color:"#fff",marginBottom:4}}>{item.movTipo==="entrada"?"+ Entrada":"- Salida"}: {item.nombre}</div>
+        <div style={{fontSize:12,color:"#555",marginBottom:20}}>Stock actual: <span style={{color:"#4b7d0b",fontWeight:700}}>{fmtG(Number(item.stock)||0)} {item.unidad}</span></div>
+        <div style={{marginBottom:12}}><div className="lbl">Cantidad ({item.unidad})</div><input className="inp" type="number" min={0} autoFocus value={cant} onChange={e=>setCant(e.target.value)}/></div>
+        <div style={{marginBottom:16}}><div className="lbl">Nota (opcional)</div><input className="inp" value={nota} onChange={e=>setNota(e.target.value)} placeholder="Ej: Compra en ferretería"/></div>
+        <div style={{display:"flex",gap:8}}><button className="btn" style={{flex:1}} onClick={()=>{if(!cant)return;onSave(cant,nota);}}>Confirmar</button><button className="btn-ghost" onClick={onClose}>Cancelar</button></div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRODUCTOS
+// ─────────────────────────────────────────────────────────────────────────────
+function Productos({productos,recetas,onSave,toast}) {
+  const [modal,setModal]=useState(null);
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+        <div className="section-title" style={{marginBottom:0}}>Stock de productos terminados</div>
+        <button className="btn" onClick={()=>setModal({})}>+ Nuevo producto</button>
+      </div>
+      {productos.length===0?<div className="card" style={{textAlign:"center",padding:40,color:"#333"}}>No hay productos cargados.</div>:(
+        <div className="grid-4" style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
+          {productos.map(p=>{
+            const bajo=p.stockMinimo&&(Number(p.stock)||0)<Number(p.stockMinimo);
+            const receta=recetas.find(r=>r.id===p.recetaId);
+            return(
+              <div key={p.id} className="card" style={{padding:0,overflow:"hidden"}}>
+                {p.foto?<img src={p.foto} alt={p.nombre} style={{width:"100%",height:100,objectFit:"cover"}}/>:<div style={{height:70,background:"#141414",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>🏷️</div>}
+                <div style={{padding:"12px 14px",display:"flex",flexDirection:"column",gap:8}}>
+                  <div style={{fontWeight:700,fontSize:13,color:"#e0e0e0"}}>{p.nombre}</div>
+                  {p.variante&&<div style={{fontSize:11,color:"#555"}}>{p.variante}</div>}
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <span style={{fontSize:14,fontWeight:800,color:bajo?"#cc4444":"#4b7d0b"}}>{p.stock||0} u</span>
+                    {p.precioVenta&&<span style={{fontSize:12,color:"#555",fontWeight:600}}>{fmtARS(p.precioVenta)}</span>}
+                  </div>
+                  {receta&&<div style={{fontSize:10,color:"#444"}}>Receta: {receta.nombre}</div>}
+                  <div style={{display:"flex",gap:4}}>
+                    <button className="btn-add" style={{flex:1,fontSize:11}} onClick={()=>setModal(p)}>✎ Editar</button>
+                    <button className="btn-icon" style={{color:"#444"}} onClick={()=>{if(window.confirm("¿Eliminás?"))onSave(productos.filter(x=>x.id!==p.id));}}>×</button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {modal!==null&&(
+        <div className="modal-bg" onClick={()=>setModal(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:15,fontWeight:700,color:"#fff",marginBottom:20}}>{modal.id?"Editar producto":"Nuevo producto"}</div>
+            <ProductoForm producto={modal} recetas={recetas} onSave={p=>{const nuevo=p.id?productos.map(x=>x.id===p.id?p:x):[...productos,{...p,id:uid(),stock:Number(p.stockInicial||0)}];onSave(nuevo);setModal(null);toast("✓ Guardado");}} onClose={()=>setModal(null)}/>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+function ProductoForm({producto,recetas,onSave,onClose}) {
+  const [form,setForm]=useState({nombre:"",variante:"",recetaId:"",precioVenta:"",stockMinimo:"",foto:"",...producto});
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  const handleFoto=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>set("foto",ev.target.result);r.readAsDataURL(file);};
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:12}}>
+      <div className="grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div style={{gridColumn:"1/-1"}}><div className="lbl">Nombre *</div><input className="inp" value={form.nombre} onChange={e=>set("nombre",e.target.value)}/></div>
+        <div><div className="lbl">Variante</div><input className="inp" placeholder="Ej: Negro 20cm" value={form.variante} onChange={e=>set("variante",e.target.value)}/></div>
+        <div><div className="lbl">Receta asociada</div><select className="inp" value={form.recetaId} onChange={e=>set("recetaId",e.target.value)}><option value="">— Ninguna —</option>{recetas.map(r=><option key={r.id} value={r.id}>{r.nombre}</option>)}</select></div>
+        <div><div className="lbl">Precio de venta (ARS)</div><input className="inp" type="number" value={form.precioVenta} onChange={e=>set("precioVenta",e.target.value)}/></div>
+        <div><div className="lbl">Stock mínimo</div><input className="inp" type="number" value={form.stockMinimo} onChange={e=>set("stockMinimo",e.target.value)}/></div>
+        {!form.id&&<div><div className="lbl">Stock inicial</div><input className="inp" type="number" value={form.stockInicial||""} onChange={e=>set("stockInicial",e.target.value)}/></div>}
+        <div style={{gridColumn:"1/-1"}}><div className="lbl">Foto</div><input type="file" accept="image/*" onChange={handleFoto} style={{fontSize:11,color:"#666"}}/>{form.foto&&<img src={form.foto} alt="" style={{width:"100%",height:80,objectFit:"cover",borderRadius:6,marginTop:6}}/>}</div>
+      </div>
+      <div style={{display:"flex",gap:8,marginTop:8}}>
+        <button className="btn" style={{flex:1}} onClick={()=>{if(!form.nombre.trim())return alert("Nombre requerido.");onSave(form);}}>Guardar</button>
+        <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VENTAS
+// ─────────────────────────────────────────────────────────────────────────────
+function Ventas({ventas,productos,onSave,onUpdate,toast}) {
+  const [modal,setModal]=useState(false);
+  const [filtroEstado,setFiltroEstado]=useState("");
+  const [filtroCanal,setFiltroCanal]=useState("");
+  const sorted=[...ventas].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  const filtradas=sorted.filter(v=>(!filtroEstado||v.estado===filtroEstado)&&(!filtroCanal||v.canal===filtroCanal));
+  const totalMes=()=>{const m=new Date().toISOString().slice(0,7);return ventas.filter(v=>v.fecha?.startsWith(m)&&v.estado!=="Cancelado").reduce((a,v)=>a+Number(v.precioTotal||0),0);};
+  const updateEstado=(id,estado)=>onUpdate(ventas.map(v=>v.id===id?{...v,estado}:v));
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,marginBottom:20}}>
+        <div>
+          <div className="section-title" style={{marginBottom:2}}>Ventas</div>
+          <div style={{fontSize:12,color:"#4b7d0b",fontWeight:700}}>Este mes: {fmtARS(totalMes())}</div>
+        </div>
+        <button className="btn" onClick={()=>setModal(true)}>+ Nueva venta</button>
+      </div>
+      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+        <select className="inp" style={{width:160,fontSize:12}} value={filtroEstado} onChange={e=>setFiltroEstado(e.target.value)}><option value="">Todos los estados</option>{ESTADOS.map(s=><option key={s}>{s}</option>)}</select>
+        <select className="inp" style={{width:160,fontSize:12}} value={filtroCanal} onChange={e=>setFiltroCanal(e.target.value)}><option value="">Todos los canales</option>{CANALES.map(c=><option key={c}>{c}</option>)}</select>
+      </div>
+      {filtradas.length===0?<div className="card" style={{padding:32,textAlign:"center",color:"#333"}}>No hay ventas.</div>:(
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {filtradas.map(v=>{
+            const ec=ESTADO_COLOR[v.estado]||"#555";
+            const prod=productos.find(p=>p.id===v.productoId);
+            return(
+              <div key={v.id} className="card" style={{padding:"14px 18px",borderLeft:`3px solid ${ec}`}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:8}}>
+                  <div>
+                    <div style={{fontSize:13,color:"#e0e0e0",fontWeight:700}}>{prod?.nombre||v.productoNombre||"Venta"}{v.variante?` · ${v.variante}`:""}</div>
+                    <div style={{fontSize:11,color:"#444",marginTop:2}}>{v.canal} · {new Date(v.fecha).toLocaleDateString("es-AR",{day:"2-digit",month:"short",year:"numeric"})}</div>
+                    {v.clienteNombre&&<div style={{fontSize:11,color:"#333",marginTop:2}}>{v.clienteNombre}{v.clienteContacto?` · ${v.clienteContacto}`:""}</div>}
+                    {v.notas&&<div style={{fontSize:11,color:"#333",marginTop:2,fontStyle:"italic"}}>{v.notas}</div>}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:15,fontWeight:800,color:"#4b7d0b"}}>{fmtARS(v.precioTotal||0)}</div>
+                      <div style={{fontSize:11,color:"#444"}}>{v.cantidad} u · {fmtARS(v.precioUnitario||0)} c/u</div>
+                    </div>
+                    <select className="inp" style={{fontSize:11,padding:"5px 8px",width:140,color:ec,background:"#141414",border:`1px solid ${ec}44`,fontWeight:600}} value={v.estado} onChange={e=>updateEstado(v.id,e.target.value)}>
+                      {ESTADOS.map(s=><option key={s} style={{color:"#e0e0e0"}}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {modal&&<VentaModal productos={productos} onSave={v=>{onSave(v);setModal(false);}} onClose={()=>setModal(false)}/>}
+    </div>
+  );
+}
+function VentaModal({productos,onSave,onClose}) {
+  const [form,setForm]=useState({canal:"MercadoLibre",productoId:"",variante:"",cantidad:1,precioUnitario:"",costoEnvio:0,estado:"Pendiente",clienteNombre:"",clienteContacto:"",notas:""});
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  const prod=productos.find(p=>p.id===form.productoId);
+  const precioTotal=(Number(form.precioUnitario)||0)*Number(form.cantidad)+Number(form.costoEnvio||0);
+  return(
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:15,fontWeight:700,color:"#fff",marginBottom:20}}>Nueva venta</div>
+        <div className="grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div><div className="lbl">Canal</div><select className="inp" value={form.canal} onChange={e=>set("canal",e.target.value)}>{CANALES.map(c=><option key={c}>{c}</option>)}</select></div>
+          <div><div className="lbl">Estado</div><select className="inp" value={form.estado} onChange={e=>set("estado",e.target.value)}>{ESTADOS.map(s=><option key={s}>{s}</option>)}</select></div>
+          <div style={{gridColumn:"1/-1"}}><div className="lbl">Producto</div><select className="inp" value={form.productoId} onChange={e=>set("productoId",e.target.value)}><option value="">— Seleccioná —</option>{productos.map(p=><option key={p.id} value={p.id}>{p.nombre}{p.variante?` · ${p.variante}`:""}</option>)}</select></div>
+          {prod&&<div style={{gridColumn:"1/-1",background:"#0d0d0d",borderRadius:8,padding:"8px 12px",fontSize:11,color:"#555",border:"1px solid #1e1e1e"}}>Stock disponible: <span style={{color:"#4b7d0b",fontWeight:700}}>{prod.stock||0} u</span></div>}
+          <div><div className="lbl">Cantidad</div><input className="inp" type="number" min={1} value={form.cantidad} onChange={e=>set("cantidad",e.target.value)}/></div>
+          <div><div className="lbl">Precio unitario (ARS)</div><input className="inp" type="number" value={form.precioUnitario} onChange={e=>set("precioUnitario",e.target.value)}/></div>
+          <div><div className="lbl">Costo de envío (ARS)</div><input className="inp" type="number" value={form.costoEnvio} onChange={e=>set("costoEnvio",e.target.value)}/></div>
+          <div style={{display:"flex",alignItems:"flex-end"}}><div style={{padding:"10px 14px",background:"#0d0d0d",borderRadius:8,border:"1px solid #1e1e1e",fontSize:12,color:"#4b7d0b",fontWeight:700,width:"100%"}}>Total: {fmtARS(precioTotal)}</div></div>
+          <div><div className="lbl">Nombre del cliente</div><input className="inp" value={form.clienteNombre} onChange={e=>set("clienteNombre",e.target.value)}/></div>
+          <div><div className="lbl">Contacto</div><input className="inp" value={form.clienteContacto} onChange={e=>set("clienteContacto",e.target.value)}/></div>
+          <div style={{gridColumn:"1/-1"}}><div className="lbl">Notas</div><input className="inp" value={form.notas} onChange={e=>set("notas",e.target.value)} placeholder="Personalización, dirección, etc."/></div>
+        </div>
+        <div style={{display:"flex",gap:8,marginTop:20}}>
+          <button className="btn" style={{flex:1}} onClick={()=>{if(!form.productoId&&!form.precioUnitario)return alert("Completá los campos requeridos.");onSave({...form,precioTotal,productoNombre:prod?.nombre||""});}}>Registrar venta</button>
+          <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROVEEDORES
+// ─────────────────────────────────────────────────────────────────────────────
+const TIPOS_PROV=["Filamento","Insumos","Servicios","Otros"];
+function Proveedores({proveedores,insumos,onSave,toast}) {
+  const [modal,setModal]=useState(null);
+  const [pedidoModal,setPedidoModal]=useState(null);
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+        <div className="section-title" style={{marginBottom:0}}>Proveedores</div>
+        <button className="btn" onClick={()=>setModal({})}>+ Nuevo proveedor</button>
+      </div>
+      {proveedores.length===0?<div className="card" style={{padding:32,textAlign:"center",color:"#333"}}>No hay proveedores.</div>:(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+          {proveedores.map(p=>(
+            <div key={p.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                <div>
+                  <div style={{fontSize:14,fontWeight:700,color:"#e0e0e0"}}>{p.nombre}</div>
+                  {p.tipo&&<div style={{fontSize:10,color:"#555",marginTop:2,letterSpacing:".06em",textTransform:"uppercase"}}>{p.tipo}</div>}
+                </div>
+                <div style={{display:"flex",gap:4}}>
+                  <button className="btn-icon" style={{color:"#4b7d0b"}} onClick={()=>setModal(p)}>✎</button>
+                  <button className="btn-icon" style={{color:"#444"}} onClick={()=>{if(window.confirm("¿Eliminás?"))onSave(proveedores.filter(x=>x.id!==p.id));}}>×</button>
+                </div>
+              </div>
+              {p.contacto&&<div style={{fontSize:11,color:"#555"}}>{p.contacto}</div>}
+              {p.web&&<a href={p.web.startsWith("http")?p.web:"https://"+p.web} target="_blank" rel="noreferrer" style={{fontSize:11,color:"#4b7d0b",textDecoration:"none"}}>{p.web}</a>}
+              {p.productos&&<div style={{fontSize:11,color:"#444",borderTop:"1px solid #1a1a1a",paddingTop:8}}>{p.productos}</div>}
+              {p.notas&&<div style={{fontSize:11,color:"#333",fontStyle:"italic"}}>{p.notas}</div>}
+              <button className="btn-add" style={{fontSize:11}} onClick={()=>setPedidoModal(p)}>+ Registrar pedido</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {modal!==null&&(
+        <div className="modal-bg" onClick={()=>setModal(null)}>
+          <div className="modal" onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:15,fontWeight:700,color:"#fff",marginBottom:20}}>{modal.id?"Editar proveedor":"Nuevo proveedor"}</div>
+            <ProveedorForm proveedor={modal} onSave={p=>{const nuevo=p.id?proveedores.map(x=>x.id===p.id?p:x):[...proveedores,{...p,id:uid(),pedidos:[]}];onSave(nuevo);setModal(null);toast("✓ Guardado");}} onClose={()=>setModal(null)}/>
+          </div>
+        </div>
+      )}
+      {pedidoModal&&<PedidoModal proveedor={pedidoModal} onSave={(desc,monto)=>{const nuevo=proveedores.map(p=>p.id===pedidoModal.id?{...p,pedidos:[...(p.pedidos||[]),{id:uid(),desc,monto:Number(monto||0),fecha:new Date().toISOString(),recibido:false}]}:p);onSave(nuevo);setPedidoModal(null);toast("✓ Pedido registrado");}} onClose={()=>setPedidoModal(null)}/>}
+    </div>
+  );
+}
+function ProveedorForm({proveedor,onSave,onClose}) {
+  const [form,setForm]=useState({nombre:"",tipo:"",contacto:"",web:"",productos:"",notas:"",...proveedor});
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:12}}>
+      <div className="grid-2" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div style={{gridColumn:"1/-1"}}><div className="lbl">Nombre *</div><input className="inp" value={form.nombre} onChange={e=>set("nombre",e.target.value)}/></div>
+        <div><div className="lbl">Tipo</div><select className="inp" value={form.tipo} onChange={e=>set("tipo",e.target.value)}><option value="">—</option>{TIPOS_PROV.map(t=><option key={t}>{t}</option>)}</select></div>
+        <div><div className="lbl">Contacto</div><input className="inp" placeholder="Tel / email / IG" value={form.contacto} onChange={e=>set("contacto",e.target.value)}/></div>
+        <div style={{gridColumn:"1/-1"}}><div className="lbl">Sitio web</div><input className="inp" value={form.web} onChange={e=>set("web",e.target.value)}/></div>
+        <div style={{gridColumn:"1/-1"}}><div className="lbl">Productos</div><input className="inp" value={form.productos} onChange={e=>set("productos",e.target.value)}/></div>
+        <div style={{gridColumn:"1/-1"}}><div className="lbl">Notas</div><textarea className="inp" value={form.notas} onChange={e=>set("notas",e.target.value)} style={{resize:"vertical",minHeight:60}}/></div>
+      </div>
+      <div style={{display:"flex",gap:8,marginTop:8}}><button className="btn" style={{flex:1}} onClick={()=>{if(!form.nombre.trim())return alert("Nombre requerido.");onSave(form);}}>Guardar</button><button className="btn-ghost" onClick={onClose}>Cancelar</button></div>
+    </div>
+  );
+}
+function PedidoModal({proveedor,onSave,onClose}) {
+  const [desc,setDesc]=useState("");const [monto,setMonto]=useState("");
+  return(
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal" style={{maxWidth:380}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:14,fontWeight:700,color:"#fff",marginBottom:4}}>Nuevo pedido a {proveedor.nombre}</div>
+        <div style={{fontSize:12,color:"#555",marginBottom:20}}>Se registra como pendiente.</div>
+        <div style={{marginBottom:12}}><div className="lbl">Descripción</div><input className="inp" autoFocus value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Ej: 3 rollos PLA negro 1kg"/></div>
+        <div style={{marginBottom:16}}><div className="lbl">Monto estimado (ARS)</div><input className="inp" type="number" value={monto} onChange={e=>setMonto(e.target.value)}/></div>
+        <div style={{display:"flex",gap:8}}><button className="btn" style={{flex:1}} onClick={()=>{if(!desc.trim())return;onSave(desc,monto);}}>Registrar pedido</button><button className="btn-ghost" onClick={onClose}>Cancelar</button></div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FINANZAS
+// ─────────────────────────────────────────────────────────────────────────────
+function Finanzas({ventas,productos,insumos}) {
+  const [periodo,setPeriodo]=useState("mes");
+  const filtrar=vs=>{
+    const now=new Date();
+    return vs.filter(v=>{
+      if(!v.fecha||v.estado==="Cancelado") return false;
+      const d=new Date(v.fecha);
+      if(periodo==="mes") return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
+      if(periodo==="3m") return (now-d)<90*24*60*60*1000;
+      if(periodo==="año") return d.getFullYear()===now.getFullYear();
+      return true;
+    });
+  };
+  const ventasFiltradas=filtrar(ventas);
+  const ingresoTotal=ventasFiltradas.reduce((a,v)=>a+Number(v.precioTotal||0),0);
+  const cantidadVentas=ventasFiltradas.length;
+  const ticketPromedio=cantidadVentas>0?ingresoTotal/cantidadVentas:0;
+  const porCanal=CANALES.map(c=>({canal:c,total:ventasFiltradas.filter(v=>v.canal===c).reduce((a,v)=>a+Number(v.precioTotal||0),0),count:ventasFiltradas.filter(v=>v.canal===c).length})).filter(c=>c.count>0).sort((a,b)=>b.total-a.total);
+  const meses=Array.from({length:6},(_,i)=>{
+    const d=new Date();d.setMonth(d.getMonth()-5+i);
+    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+    const label=d.toLocaleString("es-AR",{month:"short"}).toUpperCase();
+    const total=ventas.filter(v=>v.fecha?.startsWith(key)&&v.estado!=="Cancelado").reduce((a,v)=>a+Number(v.precioTotal||0),0);
+    return {label,total};
+  });
+  const maxTotal=Math.max(...meses.map(m=>m.total),1);
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+        <div className="section-title" style={{marginBottom:0}}>Resumen financiero</div>
+        <div style={{display:"flex",gap:6}}>
+          {[["mes","Este mes"],["3m","3 meses"],["año","Este año"],["todo","Todo"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setPeriodo(v)} style={{background:periodo===v?"#4b7d0b18":"none",border:`1px solid ${periodo===v?"#4b7d0b44":"#252525"}`,borderRadius:6,padding:"5px 12px",fontSize:11,color:periodo===v?"#4b7d0b":"#444",cursor:"pointer",fontFamily:"Montserrat,sans-serif",fontWeight:600}}>{l}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>
+        {[{label:"Ingresos",val:fmtARS(ingresoTotal),sub:`${cantidadVentas} venta${cantidadVentas!==1?"s":""}`,color:"#4b7d0b"},{label:"Ticket promedio",val:fmtARS(ticketPromedio),sub:"por venta",color:"#4b7d0b"},{label:"Inventario productos",val:fmtARS(productos.reduce((a,p)=>a+(Number(p.stock)||0)*(Number(p.precioVenta)||0),0)),sub:"valor stock terminado",color:"#6644aa"}].map((s,i)=>(
+          <div key={i} className="card" style={{padding:18}}>
+            <div style={{fontSize:24,fontWeight:800,color:s.color,letterSpacing:"-0.02em",lineHeight:1}}>{s.val}</div>
+            <div style={{fontSize:10,color:"#555",letterSpacing:".08em",textTransform:"uppercase",marginTop:8,fontWeight:600}}>{s.label}</div>
+            <div style={{fontSize:10,color:"#333",marginTop:2}}>{s.sub}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div className="card" style={{padding:18}}>
+          <div style={{fontSize:10,color:"#444",letterSpacing:".1em",textTransform:"uppercase",marginBottom:18,fontWeight:600}}>Ventas mensuales (ARS)</div>
+          <div style={{display:"flex",gap:6,alignItems:"flex-end",height:80}}>
+            {meses.map((m,i)=>(
+              <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:5}}>
+                {m.total>0&&<div style={{fontSize:9,color:"#bbb",fontWeight:600}}>{fmtARS(m.total).replace("$","")}</div>}
+                <div style={{width:"100%",borderRadius:3,background:m.total>0?"#4b7d0b":"#1a1a1a",height:`${Math.max(4,(m.total/maxTotal)*70)}px`,transition:"height .3s"}}/>
+                <div style={{fontSize:9,color:"#333",fontWeight:600}}>{m.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="card" style={{padding:18}}>
+          <div style={{fontSize:10,color:"#444",letterSpacing:".1em",textTransform:"uppercase",marginBottom:14,fontWeight:600}}>Ventas por canal</div>
+          {porCanal.length===0?<div style={{fontSize:12,color:"#333",padding:"20px 0",textAlign:"center"}}>Sin ventas en este período</div>:porCanal.map(c=>(
+            <div key={c.canal} style={{marginBottom:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                <span style={{fontSize:11,color:"#888",fontWeight:600}}>{c.canal}</span>
+                <span style={{fontSize:11,color:"#4b7d0b",fontWeight:700}}>{fmtARS(c.total)}</span>
+              </div>
+              <div style={{height:3,background:"#1a1a1a",borderRadius:2}}><div style={{height:"100%",background:"#4b7d0b",borderRadius:2,width:`${(c.total/ingresoTotal)*100}%`}}/></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// APP RAÍZ
+// ═════════════════════════════════════════════════════════════════════════════
+export default function App() {
+  const [screen,setScreen]=useState("home");
+  if(screen==="lenga")  return <AppLenga  onBack={()=>setScreen("home")}/>;
+  if(screen==="wuly")   return <AppWuly   onBack={()=>setScreen("home")}/>;
+  if(screen==="granja") return <AppGranja onBack={()=>setScreen("home")}/>;
+  return <HomeHub onSelect={setScreen}/>;
+}
